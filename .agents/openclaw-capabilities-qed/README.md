@@ -17,6 +17,16 @@
      - No directive parser for inline "Read X.md" instructions
    - **QED:** See `proofs/file-inclusion.qed.ts`
 
+### 2. **Tool Discovery & Availability** ✅ FULLY IMPLEMENTED
+   - **Question:** How does OpenClaw decide which tools are available to an agent and when to use them?
+   - **Answer:** **Layered system** — Profile → Context Filtering → Tool Policy → Structured Definitions
+   - **Evidence:**
+     - `src/agents/tool-catalog.ts` — Tool definitions with profiles (minimal, coding, messaging, full)
+     - `src/agents/tools-effective-inventory.ts` — Context-aware filtering (sender, channel, permissions)
+     - `src/agents/pi-tools.policy.ts` — Allow/deny rules per-tool
+     - `src/agents/system-prompt.ts:496-530` — Tooling guidance in system prompt
+   - **QED:** See `proofs/tool-availability.qed.ts`
+
 ---
 
 ## Storage & Access
