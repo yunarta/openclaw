@@ -43,6 +43,24 @@
      - `SessionManager` (from `@mariozechner/pi-coding-agent`) — Tool execution
    - **QED:** See `capabilities/agent-inference-tool-skill-flow.md` + `proofs/agent-tool-skill-execution.qed.ts`
 
+### 4. **Context Maintenance & Compaction** ✅ FULLY IMPLEMENTED
+   - **Question:** How does OpenClaw maintain context across long conversations? Sliding window? Token budget? What's the actual strategy?
+   - **Answer:** **NOT sliding window** — **Smart multi-stage compaction with intelligent routing**
+   - **Key findings:**
+     - Preemptive compaction check before each inference (`shouldPreemptivelyCompactBeforePrompt()`)
+     - Smart routing: truncate-only vs. compact-only vs. compact-then-truncate based on context overflow
+     - NOT naive summarization — three-level fallback (provider → LLM → structured fallback)
+     - Preserves tool_use/tool_result semantic boundaries during message splitting
+     - Configurable: max history share, quality guards, recent turns to preserve
+     - Multi-trigger: preemptive overflow check, extension hook, timeout-based fallback
+   - **Evidence:**
+     - `src/agents/pi-embedded-runner/run/preemptive-compaction.ts:40-90` — Overflow detection & routing
+     - `src/agents/compaction.ts` — Core compaction functions (chunking, summarization, pruning)
+     - `src/agents/pi-hooks/compaction-safeguard.ts:724-875` — Extension hook for safeguard-mode summarization
+     - `src/agents/pi-embedded-runner/extensions.ts:88-111` — Extension factory registration
+     - Constants: `SAFETY_MARGIN=1.2`, `BASE_CHUNK_RATIO=0.4`, `MIN_CHUNK_RATIO=0.15`
+   - **QED:** See `capabilities/context-maintenance-and-compaction.md` + `proofs/context-maintenance.qed.ts`
+
 ---
 
 ## Storage & Access
