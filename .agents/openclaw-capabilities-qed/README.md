@@ -61,6 +61,35 @@
      - Constants: `SAFETY_MARGIN=1.2`, `BASE_CHUNK_RATIO=0.4`, `MIN_CHUNK_RATIO=0.15`
    - **QED:** See `capabilities/context-maintenance-and-compaction.md` + `proofs/context-maintenance.qed.ts`
 
+### 5. **Bootstrap & Heartbeat Files Lifecycle** ✅ FULLY IMPLEMENTED
+   - **Question:** When are BOOTSTRAP.md and HEARTBEAT.md sent to the model? Once, multiple times, conditionally?
+   - **Answer:** **LOADED EVERY INFERENCE** (but with different rules)
+   - **Key findings:**
+     - BOOTSTRAP.md: Created once on setup → sent every inference (stable, above cache boundary) → main agent only
+     - HEARTBEAT.md: Conditionally included based on config → sent every inference (dynamic, below cache boundary) → main agent only
+     - Both excluded from subagent/cron sessions (MINIMAL_BOOTSTRAP_ALLOWLIST)
+     - BOOTSTRAP.md hidden from UI after onboarding (hideBootstrap flag)
+     - Neither file is compacted (system prompt stays constant)
+     - Workspace reminder: "Reminder: commit your changes" added if BOOTSTRAP.md exists
+   - **Evidence:**
+     - `src/agents/workspace.ts:397-446` — BOOTSTRAP.md creation (once only)
+     - `src/agents/heartbeat-system-prompt.ts:54-72` — Conditional loading logic
+     - `src/agents/system-prompt.ts:699-745` — Loading in system prompt build
+     - `src/agents/bootstrap-files.ts:149-182` — Conditional exclusion rules
+     - `src/gateway/server-methods/agents.ts:57-68` — UI visibility flag
+
+### 6. **Default MD Files Optimization for Use Case** 📋 GUIDANCE
+   - **Question:** Default MD files are generic chatbot templates. How to optimize them for a specific agent use case (coding, support, etc.)?
+   - **Answer:** **Tailor each file to your use case; remove irrelevant guidance that wastes tokens**
+   - **Key insights:**
+     - Every line in MD files is sent with EVERY inference (token cost!)
+     - Generic guidance (group chat behavior, emoji reactions) irrelevant for specialized agents (coding)
+     - Audit and rewrite each file: AGENTS.md, SOUL.md, IDENTITY.md, TOOLS.md, BOOTSTRAP.md, HEARTBEAT.md
+     - Typical savings: 45-50% system prompt reduction by removing irrelevant content
+     - Cost: ~850 tokens per inference = ~85,000 tokens per 100 inferences
+   - **Optimization principle:** "Every sentence must affect agent behavior for YOUR use case"
+   - **See:** `capabilities/default-md-files-optimization.md` for detailed file-by-file guide
+
 ---
 
 ## Storage & Access
