@@ -92,8 +92,15 @@
 
 ---
 
+## Directives for Agent Use
+
+- **OPTIMIZE-MD-FILES.md** — Complete guide for Copilot agents to help users optimize OpenClaw workspace MD files based on use case (coding, support, research, etc.). Includes templates, token cost analysis, and step-by-step optimization process.
+
+---
+
 ## Storage & Access
 
 - Each capability as `.md` file with question + answer + evidence + links to QED
 - QED proofs in `proofs/` with same name as capability file
+- Directives in `directives/` for agent-ready instructions
 - You can ask new questions anytime; I'll search, document, and commit findings
