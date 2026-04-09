@@ -27,6 +27,22 @@
      - `src/agents/system-prompt.ts:496-530` — Tooling guidance in system prompt
    - **QED:** See `proofs/tool-availability.qed.ts`
 
+### 3. **Agent Inference: Tool & Skill Execution Flow** ✅ FULLY IMPLEMENTED
+   - **Question:** How do agents and inference use tools and skills? What's the complete execution flow?
+   - **Answer:** **8-phase flow** — Discovery → Prompt Assembly → Session Creation → Model Inference → Tool Execution → Result Feedback
+   - **Key findings:**
+     - Tools are discovered in Phase 1, system prompt built in Phase 2
+     - System prompt contains **guidance**, not full tool definitions
+     - Tool definitions (with schemas) passed **separately** to model
+     - Skills are **NOT separate** — accessed via `read()` tool, then model follows guidance
+     - Inference is a loop: Model → Call Tool → Execute → Feedback → Continue/Reply
+   - **Evidence:**
+     - `src/agents/pi-embedded-runner/run/attempt.ts:~470` — Skill discovery
+     - `src/agents/pi-embedded-runner/run/attempt.ts:~760` — System prompt assembly
+     - `src/agents/pi-embedded-runner/run/attempt.ts:~932-945` — Session creation with tools
+     - `SessionManager` (from `@mariozechner/pi-coding-agent`) — Tool execution
+   - **QED:** See `capabilities/agent-inference-tool-skill-flow.md` + `proofs/agent-tool-skill-execution.qed.ts`
+
 ---
 
 ## Storage & Access
