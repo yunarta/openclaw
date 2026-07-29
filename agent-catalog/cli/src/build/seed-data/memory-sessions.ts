@@ -24,6 +24,54 @@ export const memorySessionSymbols: SeedSymbol[] = [
     reusable: false,
     applicationCoupling: "high",
   },
+  {
+    key: "sym:MemoryIndexManager.search",
+    fileKey: "extensions/memory-core/src/memory/manager.ts",
+    name: "MemoryIndexManager.search",
+    qualifiedName: "MemoryIndexManager.search",
+    kind: "method",
+    startLine: 1114,
+    purpose:
+      "The public semantic-memory retrieval entry point (async search(query, opts)). Delegates to a private searchVector wrapper (manager.ts:1613) around manager-search.ts's standalone searchVector(), which joins memory_index_chunks against the memory_index_chunks_vec vector table. Reached only through the memory_search/memory_get tools, never auto-invoked.",
+    architecturalRole: "entry-point",
+    importance: "critical",
+    status: "confirmed",
+    reusable: false,
+    applicationCoupling: "medium",
+  },
+  {
+    key: "sym:MemoryManagerEmbeddingOps.writeChunks",
+    fileKey: "extensions/memory-core/src/memory/manager-embedding-ops.ts",
+    name: "MemoryManagerEmbeddingOps.writeChunks",
+    qualifiedName: "MemoryManagerEmbeddingOps.writeChunks",
+    kind: "method",
+    startLine: 980,
+    endLine: 1015,
+    purpose:
+      "Private write path for one indexed file's chunks. Inside a single sync transaction: clears any prior rows for the path/source, then for each chunk inserts/updates memory_index_chunks (with an ON CONFLICT upsert keyed by a content hash id) and writes the corresponding embedding into the memory_index_chunks_vec vector table via replaceMemoryVectorRow.",
+    architecturalRole: "implementation",
+    importance: "critical",
+    status: "confirmed",
+    reusable: false,
+    applicationCoupling: "high",
+  },
+  {
+    key: "sym:buildPromptSection",
+    fileKey: "extensions/memory-core/src/prompt-section.ts",
+    name: "buildPromptSection",
+    kind: "function",
+    startLine: 4,
+    endLine: 39,
+    signature:
+      "const buildPromptSection: MemoryPromptSectionBuilder = ({ availableTools, citationsMode }) => string[]",
+    purpose:
+      "Registered as the memory capability's promptBuilder (api.registerMemoryCapability). Injects only tool-usage guidance text ('run memory_search ... then use memory_get') into the system prompt when the memory_search/memory_get tools are available -- never the retrieved chunk content itself. Confirms semantic-memory retrieval is entirely tool-mediated, mirroring the Skills lazy-loading pattern.",
+    architecturalRole: "prompt-injection",
+    importance: "high",
+    status: "confirmed",
+    reusable: false,
+    applicationCoupling: "low",
+  },
 ];
 
 export const persistenceEntities: SeedPersistenceEntity[] = [
@@ -143,10 +191,11 @@ export const persistenceEntities: SeedPersistenceEntity[] = [
     storageBackend: "sqlite",
     schemaLocation: "src/state/openclaw-agent-schema.sql",
     writerSymbols:
-      "Not individually confirmed this pass; a dedicated memory-indexing module was not located by name during this pass (see open_questions).",
-    readerSymbols: "Not individually confirmed this pass.",
+      "extensions/memory-core/src/memory/manager-embedding-ops.ts's MemoryManagerEmbeddingOps.writeChunks (memory_index_chunks) and manager-vector-write.ts's replaceMemoryVectorRow (memory_index_chunks_vec); manager-embedding-cache.ts's upsertMemoryEmbeddingCache (memory_embedding_cache).",
+    readerSymbols:
+      "extensions/memory-core/src/memory/manager.ts's MemoryIndexManager.search -> manager-search.ts's searchVector/searchKeyword; manager-embedding-cache.ts's loadMemoryEmbeddingCache.",
     lifecycle:
-      "Per-agent-DB semantic-memory index: sources are chunked (memory_index_chunks), each chunk has provenance tracking, and an embedding_cache avoids recomputing embeddings. This is the strongest confirmed evidence of true long-term/semantic memory (embedding-based retrieval) as distinct from raw conversation history.",
+      "Per-agent-DB semantic-memory index, owned end to end by the bundled extensions/memory-core plugin (@openclaw/memory-core): sources are chunked (memory_index_chunks), each chunk has provenance tracking, and an embedding_cache avoids recomputing embeddings. This is the strongest confirmed evidence of true long-term/semantic memory (embedding-based retrieval) as distinct from raw conversation history.",
     concurrencyNotes: "Not confirmed.",
     recoveryNotes:
       "memory_index_state suggests an explicit indexing-progress/health state distinct from the index content itself.",
@@ -230,13 +279,16 @@ export const memorySystems: SeedMemorySystem[] = [
     status: "confirmed",
     storageBackend:
       "SQLite (agents/<agentId>/agent/openclaw-agent.sqlite: memory_index_meta, memory_index_sources, memory_index_chunks, memory_index_chunk_provenance, memory_embedding_cache, memory_index_state)",
-    writePath: "Not individually confirmed this pass -- indexing module not located by name.",
-    retrievalPath: "Not individually confirmed this pass.",
+    writePath:
+      "RESOLVED: extensions/memory-core (bundled plugin @openclaw/memory-core) owns the full pipeline. MemoryManagerEmbeddingOps.writeChunks (extensions/memory-core/src/memory/manager-embedding-ops.ts:980-1015, private method on the class starting line 303) upserts memory_index_chunks inside a single sync transaction, and calls replaceMemoryVectorRow (manager-vector-write.ts) for the sqlite-vec table plus an FTS write. loadMemoryEmbeddingCache/upsertMemoryEmbeddingCache (manager-embedding-cache.ts) separately read/write memory_embedding_cache so embeddings are not recomputed for unchanged chunk hashes.",
+    retrievalPath:
+      "RESOLVED: MemoryIndexManager.search (manager.ts:1114, public) -> private searchVector (manager.ts:1613) -> standalone searchVector() (manager-search.ts:444), which joins memory_index_chunks against memory_index_chunks_vec. Exposed to the model exclusively via two registered tools (memory_search, memory_get; extensions/memory-core/index.ts:340-346) -- there is no automatic background injection of retrieved chunk content.",
     rankingMethod:
-      "Embedding-based (memory_embedding_cache implies vector-similarity retrieval), possibly hybrid with keyword search; not confirmed.",
-    promptInjection: "Not confirmed.",
+      "Embedding-based vector similarity (searchVector), with a separate keyword/FTS path (searchKeyword, manager-search.ts:646) -- confirmed to coexist as two distinct query functions; whether/how MemoryIndexManager.search blends their results was not traced line-by-line this pass.",
+    promptInjection:
+      "RESOLVED: no chunk content is auto-injected. buildPromptSection (extensions/memory-core/src/prompt-section.ts, registered as the memory capability's promptBuilder via api.registerMemoryCapability) injects only tool-usage guidance text instructing the model to call memory_search/memory_get itself when the turn needs prior context -- the same lazy, description-driven pattern confirmed for Skills (see the skill invocation flow).",
     retentionPolicy:
-      "memory_index_state suggests explicit index-health/progress tracking rather than a simple always-fresh assumption.",
+      "memory_index_state suggests explicit index-health/progress tracking rather than a simple always-fresh assumption; retention/eviction policy itself not traced this pass.",
   },
   {
     name: "root memory files",
@@ -389,6 +441,41 @@ export const memorySessionFlowSteps: SeedFlowStep[] = [
 
 export const memorySessionEvidence: SeedEvidence[] = [
   {
+    key: "ev:memory-core-write-chunks",
+    fileKey: "extensions/memory-core/src/memory/manager-embedding-ops.ts",
+    symbolKey: "sym:MemoryManagerEmbeddingOps.writeChunks",
+    startLine: 952,
+    endLine: 1015,
+    claim:
+      "extensions/memory-core's MemoryManagerEmbeddingOps.writeChunks is the writer for memory_index_chunks (upsert) and, via replaceMemoryVectorRow, memory_index_chunks_vec; manager-embedding-cache.ts's upsertMemoryEmbeddingCache separately writes memory_embedding_cache.",
+    evidenceType: "implementation",
+    confidence: 1.0,
+    notes: "Read directly.",
+  },
+  {
+    key: "ev:memory-core-search-vector",
+    fileKey: "extensions/memory-core/src/memory/manager-search.ts",
+    startLine: 444,
+    endLine: 646,
+    claim:
+      "manager-search.ts's searchVector() is the semantic (embedding-similarity) reader querying memory_index_chunks JOIN memory_index_chunks_vec; searchKeyword() is a separate FTS-based reader. MemoryIndexManager.search (manager.ts:1114) is the public method that reaches these.",
+    evidenceType: "implementation",
+    confidence: 1.0,
+    notes: "Read directly (searchVector signature and query construction).",
+  },
+  {
+    key: "ev:memory-core-tool-mediated-retrieval",
+    fileKey: "extensions/memory-core/src/prompt-section.ts",
+    symbolKey: "sym:buildPromptSection",
+    startLine: 1,
+    endLine: 39,
+    claim:
+      "buildPromptSection injects only tool-usage guidance ('run memory_search ... then use memory_get') into the prompt, never retrieved chunk content -- confirmed by reading the function in full plus its registration as promptBuilder in extensions/memory-core/index.ts:328-346 alongside the memory_search/memory_get tool registrations.",
+    evidenceType: "implementation",
+    confidence: 1.0,
+    notes: "Read directly.",
+  },
+  {
     key: "ev:cron-runs-embedded-agent",
     fileKey: "src/cron/isolated-agent/run-executor.ts",
     symbolKey: "sym:executeCronRun",
@@ -440,15 +527,12 @@ export const memorySessionOpenQuestions: SeedOpenQuestion[] = [
     question:
       "What module writes to and reads from the semantic memory index tables (memory_index_chunks, memory_embedding_cache)?",
     evidenceInspected:
-      "Table names confirmed via schema grep only; no module matching an obvious 'memory-index'/'embedding' name was located under src/memory (which contains only root-memory-files.ts) or src/agents this pass.",
-    reasonUnresolved:
-      "Not searched with broader patterns (e.g. 'embedding', 'memory_index') due to time constraints.",
-    likelyInterpretation:
-      "Likely lives under a plugin (memory-related bundled extension) rather than src/memory, given how thin src/memory itself is.",
-    verificationMethod:
-      "grep -rln 'memory_index_chunks\\|memory_embedding_cache' --include=*.ts, then read the matching module(s).",
+      "RESOLVED in a follow-up pass: `grep -rl \"memory_index_chunks\\|memory_embedding_cache\" extensions/` -> extensions/memory-core (the bundled @openclaw/memory-core plugin), confirming the likely-interpretation guess below. Read manager-embedding-ops.ts's writeChunks (lines 980-1015), manager-vector-write.ts (24 lines, full), manager-embedding-cache.ts (121 lines, full), manager-search.ts's searchVector/searchKeyword signatures (lines 444-763), manager.ts's public search method (line 1114) and MemoryIndexManager class declaration (line 418), extensions/memory-core/index.ts's plugin registration (lines 328-350), and prompt-section.ts's buildPromptSection (full, 39 lines). Writer: MemoryManagerEmbeddingOps.writeChunks + replaceMemoryVectorRow + upsertMemoryEmbeddingCache. Reader: MemoryIndexManager.search -> searchVector/searchKeyword, reached only via the registered memory_search/memory_get tools -- buildPromptSection injects tool-usage guidance only, never chunk content, confirming retrieval is entirely tool-mediated like Skills.",
+    reasonUnresolved: "N/A -- resolved.",
+    likelyInterpretation: "N/A -- resolved with direct evidence.",
+    verificationMethod: "N/A -- resolved.",
     priority: "high",
-    status: "open",
+    status: "resolved",
   },
   {
     category: "long-running-execution",

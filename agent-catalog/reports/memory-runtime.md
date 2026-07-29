@@ -26,11 +26,11 @@ Writing conversation turns to transcript_events/session_nodes is confirmed to ha
 
 ## Memory retrieval
 
-**Status:** inferred  **Category:** memory  **Maturity:** production
+**Status:** confirmed  **Category:** memory  **Maturity:** production
 
-Retrieval of prior conversation history for prompt construction is confirmed to exist conceptually (multi-turn chat requires it) and semantic-memory retrieval is confirmed at the schema level (memory_index_chunks + memory_embedding_cache), but neither retrieval function was located and read this pass.
+PARTIALLY RESOLVED in a follow-up pass, scoped to the semantic memory index: extensions/memory-core (a bundled plugin, @openclaw/memory-core) owns memory_index_chunks/memory_index_chunks_vec/memory_embedding_cache end to end. Retrieval is entirely tool-mediated, not auto-injected -- buildPromptSection (extensions/memory-core/src/prompt-section.ts, registered as the memory capability's promptBuilder) only injects tool-usage guidance text telling the model to call the memory_search/memory_get tools when relevant, mirroring the same lazy, description-driven pattern documented for Skills (see skill invocation flow). Generic prior-conversation-history retrieval for ordinary multi-turn prompt construction (distinct from the semantic index) was not re-investigated this pass.
 
-> See memory_systems records 'conversation history' and 'semantic memory index'.
+> MemoryIndexManager.search (extensions/memory-core/src/memory/manager.ts:1114) -> private searchVector (manager.ts:1613) -> standalone searchVector() (manager-search.ts:444), querying memory_index_chunks JOIN memory_index_chunks_vec. Exposed to the model via api.registerTool for memory_search/memory_get (extensions/memory-core/index.ts:340-346).
 
 ## Persisted memory systems (per `memory_systems` table)
 
@@ -42,5 +42,5 @@ Retrieval of prior conversation history for prompt construction is confirmed to 
 ## Open questions
 
 - [high] What module writes to and reads from the semantic memory index tables (memory_index_chunks, memory_embedding_cache)?
-  Likely: Likely lives under a plugin (memory-related bundled extension) rather than src/memory, given how thin src/memory itself is.
+  Likely: N/A -- resolved with direct evidence.
 

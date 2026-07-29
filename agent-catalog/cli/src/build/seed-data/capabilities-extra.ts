@@ -17,14 +17,17 @@ export const extraCapabilities: SeedCapability[] = [
   {
     name: "memory retrieval",
     category: "memory",
-    status: "inferred",
+    status: "confirmed",
     maturity: "production",
     reusable: false,
     description:
-      "Retrieval of prior conversation history for prompt construction is confirmed to exist conceptually (multi-turn chat requires it) and semantic-memory retrieval is confirmed at the schema level (memory_index_chunks + memory_embedding_cache), but neither retrieval function was located and read this pass.",
+      "PARTIALLY RESOLVED in a follow-up pass, scoped to the semantic memory index: extensions/memory-core (a bundled plugin, @openclaw/memory-core) owns memory_index_chunks/memory_index_chunks_vec/memory_embedding_cache end to end. Retrieval is entirely tool-mediated, not auto-injected -- buildPromptSection (extensions/memory-core/src/prompt-section.ts, registered as the memory capability's promptBuilder) only injects tool-usage guidance text telling the model to call the memory_search/memory_get tools when relevant, mirroring the same lazy, description-driven pattern documented for Skills (see skill invocation flow). Generic prior-conversation-history retrieval for ordinary multi-turn prompt construction (distinct from the semantic index) was not re-investigated this pass.",
     implementationSummary:
-      "See memory_systems records 'conversation history' and 'semantic memory index'.",
-    symbols: [],
+      "MemoryIndexManager.search (extensions/memory-core/src/memory/manager.ts:1114) -> private searchVector (manager.ts:1613) -> standalone searchVector() (manager-search.ts:444), querying memory_index_chunks JOIN memory_index_chunks_vec. Exposed to the model via api.registerTool for memory_search/memory_get (extensions/memory-core/index.ts:340-346).",
+    symbols: [
+      { symbolKey: "sym:MemoryIndexManager.search", role: "entry-point" },
+      { symbolKey: "sym:buildPromptSection", role: "prompt-injection" },
+    ],
   },
   {
     name: "prompt construction",

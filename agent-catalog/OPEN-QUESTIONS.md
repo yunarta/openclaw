@@ -57,11 +57,11 @@ or `SELECT * FROM unresolved_high_priority;` directly against `catalog.sqlite`.
 ## [high] What module writes to and reads from the semantic memory index tables (memory_index_chunks, memory_embedding_cache)?
 
 - **Category:** memory
-- **Status:** open
-- **Evidence inspected:** Table names confirmed via schema grep only; no module matching an obvious 'memory-index'/'embedding' name was located under src/memory (which contains only root-memory-files.ts) or src/agents this pass.
-- **Why unresolved:** Not searched with broader patterns (e.g. 'embedding', 'memory_index') due to time constraints.
-- **Likely interpretation:** Likely lives under a plugin (memory-related bundled extension) rather than src/memory, given how thin src/memory itself is.
-- **How to verify:** grep -rln 'memory_index_chunks\|memory_embedding_cache' --include=*.ts, then read the matching module(s).
+- **Status:** resolved
+- **Evidence inspected:** RESOLVED in a follow-up pass: `grep -rl "memory_index_chunks\|memory_embedding_cache" extensions/` -> extensions/memory-core (the bundled @openclaw/memory-core plugin), confirming the likely-interpretation guess below. Read manager-embedding-ops.ts's writeChunks (lines 980-1015), manager-vector-write.ts (24 lines, full), manager-embedding-cache.ts (121 lines, full), manager-search.ts's searchVector/searchKeyword signatures (lines 444-763), manager.ts's public search method (line 1114) and MemoryIndexManager class declaration (line 418), extensions/memory-core/index.ts's plugin registration (lines 328-350), and prompt-section.ts's buildPromptSection (full, 39 lines). Writer: MemoryManagerEmbeddingOps.writeChunks + replaceMemoryVectorRow + upsertMemoryEmbeddingCache. Reader: MemoryIndexManager.search -> searchVector/searchKeyword, reached only via the registered memory_search/memory_get tools -- buildPromptSection injects tool-usage guidance only, never chunk content, confirming retrieval is entirely tool-mediated like Skills.
+- **Why unresolved:** N/A -- resolved.
+- **Likely interpretation:** N/A -- resolved with direct evidence.
+- **How to verify:** N/A -- resolved.
 
 ## [low] What is the exact SecretRef resolution mechanism (type definition and resolver function) described in root AGENTS.md, and where does it live?
 

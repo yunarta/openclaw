@@ -538,4 +538,41 @@ export const modules: SeedModule[] = [
       { fileKey: "packages/ai/src/env-api-keys.ts", role: "helper" },
     ],
   },
+  {
+    name: "memory-core-semantic-index",
+    rootPath: "extensions/memory-core",
+    category: "memory",
+    status: "confirmed",
+    purpose:
+      "Resolves the 'what writes/reads the semantic memory index' open question. A bundled plugin (@openclaw/memory-core) that owns the full semantic-memory pipeline: chunking, embedding, embedding-cache reuse, vector-table writes, and embedding/keyword retrieval, exposed to the model as two tools (memory_search, memory_get) rather than auto-injected content.",
+    responsibilities:
+      "Writing memory_index_chunks/memory_index_chunks_vec/memory_embedding_cache (MemoryManagerEmbeddingOps.writeChunks, replaceMemoryVectorRow, upsertMemoryEmbeddingCache); reading them for retrieval (MemoryIndexManager.search -> searchVector/searchKeyword); registering memory_search/memory_get tools and a promptBuilder (buildPromptSection) that injects only tool-usage guidance, never chunk content.",
+    nonResponsibilities:
+      "Does not handle generic conversation-history/transcript persistence for ordinary multi-turn prompt construction (that is transcript_events/session_nodes, owned elsewhere -- see the 'memory write' capability, still not fully traced).",
+    publicSurface:
+      "extensions/memory-core/index.ts (plugin entry): api.registerMemoryCapability, api.registerTool for memory_search/memory_get.",
+    runtimeBehavior:
+      "On indexing: MemoryManagerEmbeddingOps.writeChunks runs inside one sync transaction per file, clearing prior rows for that path/source then upserting each chunk plus its vector embedding, reusing cached embeddings by content hash when available. On retrieval: the model calls memory_search/memory_get itself (prompted to do so by buildPromptSection's guidance text); MemoryIndexManager.search dispatches to embedding-similarity (searchVector) and/or FTS (searchKeyword) queries.",
+    extractionRelevance:
+      "medium -- a standalone gateway extracting Skills-style lazy tool-mediated context loading (already documented for the Skills subsystem) would find this a second, independent confirmation of the same design pattern applied to long-term memory; the SQLite chunk/vector/cache schema is a reusable reference shape.",
+    extractionDifficulty: "medium",
+    files: [
+      { fileKey: "extensions/memory-core/index.ts", role: "entry-point" },
+      { fileKey: "extensions/memory-core/src/prompt-section.ts", role: "policy" },
+      { fileKey: "extensions/memory-core/src/memory/manager.ts", role: "orchestrator" },
+      {
+        fileKey: "extensions/memory-core/src/memory/manager-embedding-ops.ts",
+        role: "implementation",
+      },
+      {
+        fileKey: "extensions/memory-core/src/memory/manager-vector-write.ts",
+        role: "implementation",
+      },
+      {
+        fileKey: "extensions/memory-core/src/memory/manager-embedding-cache.ts",
+        role: "implementation",
+      },
+      { fileKey: "extensions/memory-core/src/memory/manager-search.ts", role: "implementation" },
+    ],
+  },
 ];

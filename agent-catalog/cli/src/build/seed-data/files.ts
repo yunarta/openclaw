@@ -1507,4 +1507,55 @@ export const files: SeedFile[] = [
     importance: "medium",
     purpose: "Confirmed to exist; onboarding/setup (login) API surface for the Anthropic plugin.",
   },
+
+  // --- Memory Core plugin (extensions/memory-core): semantic memory index owner ---
+  {
+    path: "extensions/memory-core/index.ts",
+    category: "memory",
+    importance: "critical",
+    purpose:
+      "Read the registration section in full (lines ~320-350). Plugin entry point: registers the memory capability (api.registerMemoryCapability with promptBuilder: buildPromptSection and runtime: memoryRuntime) and two agent tools, memory_search and memory_get (api.registerTool), plus a separate 'intent' tool for standing intents. Confirms semantic-memory retrieval is exposed to the model exclusively as tools, never auto-injected content.",
+  },
+  {
+    path: "extensions/memory-core/src/prompt-section.ts",
+    category: "memory",
+    importance: "critical",
+    purpose:
+      "Read in full (39 lines). buildPromptSection: injects only tool-usage guidance text ('run memory_search on MEMORY.md + memory/*.md + indexed session transcripts; then use memory_get') into the system prompt when memory_search/memory_get are available -- never the retrieved chunk content itself.",
+  },
+  {
+    path: "extensions/memory-core/src/memory/manager.ts",
+    category: "memory",
+    importance: "critical",
+    purpose:
+      "Large file (2458 lines); read the class declaration and public search()/sync() method signatures this pass. Exports MemoryIndexManager (line 418, extends MemoryManagerEmbeddingOps, implements MemorySearchManager) -- the top-level semantic-memory manager. async search(query, opts) (line 1114) is the public retrieval entry point; a private searchVector wrapper (line 1613) delegates to manager-search.ts's standalone searchVector(). async sync(params) (line 1905) is the indexing entry point (not read line-by-line this pass).",
+  },
+  {
+    path: "extensions/memory-core/src/memory/manager-embedding-ops.ts",
+    category: "memory",
+    importance: "critical",
+    purpose:
+      "Read the writer path in full (lines 940-1015 of 1418). Exports abstract class MemoryManagerEmbeddingOps (line 303, base class of MemoryIndexManager). Its private writeChunks method (lines 980-1015) is the confirmed writer for memory_index_chunks: inside one sync transaction, clears prior rows for the path/source then upserts each chunk (ON CONFLICT by content-hash id) and writes its embedding into memory_index_chunks_vec via replaceMemoryVectorRow. Also owns memory_index_sources upsert/delete (upsertFileRecord/deleteFileRecord).",
+  },
+  {
+    path: "extensions/memory-core/src/memory/manager-vector-write.ts",
+    category: "memory",
+    importance: "high",
+    purpose:
+      "Read in full (24 lines). Exports replaceMemoryVectorRow: deletes then inserts one row into memory_index_chunks_vec (id, embedding-as-blob) -- the vector-table write primitive called from writeChunks.",
+  },
+  {
+    path: "extensions/memory-core/src/memory/manager-embedding-cache.ts",
+    category: "memory",
+    importance: "high",
+    purpose:
+      "Read in full (121 lines). Exports loadMemoryEmbeddingCache and upsertMemoryEmbeddingCache: the confirmed reader/writer pair for memory_embedding_cache, keyed by (provider, model, provider_key, hash) so an unchanged chunk's embedding is reused instead of recomputed across index runs.",
+  },
+  {
+    path: "extensions/memory-core/src/memory/manager-search.ts",
+    category: "memory",
+    importance: "critical",
+    purpose:
+      "Large file (1069 lines); read the exported query function signatures and query construction this pass (lines 444-763). Exports searchVector (line 444, embedding-similarity search joining memory_index_chunks against memory_index_chunks_vec) and searchKeyword (line 646, FTS-based lexical search) as two distinct reader functions reached by MemoryIndexManager.search.",
+  },
 ];
