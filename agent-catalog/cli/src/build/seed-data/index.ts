@@ -28,6 +28,7 @@ import {
   oauthFlowSteps,
   oauthEvidence,
   oauthOpenQuestions,
+  oauthDataTypes,
 } from "./oauth.js";
 import {
   providerSymbols,
@@ -112,6 +113,7 @@ export function buildCatalogSeed(): CatalogSeed {
       ...skillDataTypes,
       ...eventDataTypes,
       ...sandboxDataTypes,
+      ...oauthDataTypes,
     ],
     events: seedEvents,
     tools: seedTools,

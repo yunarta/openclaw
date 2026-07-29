@@ -6,14 +6,14 @@ Generated from `catalog.sqlite`. Do not hand-edit; run `npm run generate-reports
 
 | Table | Rows |
 | --- | --- |
-| files | 227 |
-| symbols | 49 |
+| files | 229 |
+| symbols | 53 |
 | modules | 15 |
-| capabilities | 29 |
+| capabilities | 30 |
 | flows | 11 |
 | flow_steps | 36 |
 | snippets | 5 |
-| evidence | 26 |
+| evidence | 28 |
 | findings | 8 |
 | open_questions | 12 |
 

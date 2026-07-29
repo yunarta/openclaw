@@ -5,6 +5,7 @@ import type {
   SeedFlowStep,
   SeedEvidence,
   SeedOpenQuestion,
+  SeedDataType,
 } from "../seed-types.js";
 
 export const oauthSymbols: SeedSymbol[] = [
@@ -63,6 +64,74 @@ export const oauthSymbols: SeedSymbol[] = [
     applicationCoupling: "low",
   },
   {
+    key: "sym:coerceSecretRef",
+    fileKey: "src/config/types.secrets.ts",
+    name: "coerceSecretRef",
+    kind: "function",
+    startLine: 134,
+    endLine: 160,
+    signature:
+      "function coerceSecretRef(value: unknown, defaults?: SecretDefaults): SecretRef | null",
+    purpose:
+      "Normalizes a canonical SecretRef object, legacy markers (secretref-env:, __env__:), or $NAME/${NAME} env-shorthand strings into the canonical { source, provider, id } SecretRef shape. Read in full.",
+    architecturalRole: "normalizer",
+    importance: "high",
+    status: "confirmed",
+    reusable: true,
+    applicationCoupling: "low",
+  },
+  {
+    key: "sym:resolveSecretInputString",
+    fileKey: "src/config/types.secrets.ts",
+    name: "resolveSecretInputString",
+    kind: "function",
+    startLine: 226,
+    endLine: 261,
+    signature:
+      'function resolveSecretInputString(params): { status: "available"; value } | { status: "configured_unavailable"; ref } | { status: "missing" }',
+    purpose:
+      "Resolves a config field to a literal value, a configured-but-unresolved SecretRef ('configured_unavailable'), or nothing ('missing'). In strict mode a configured-unavailable ref throws UnresolvedSecretInputError instead of returning the status. This is the exact 'configured-unavailable' terminology root AGENTS.md's SecretRef fail-closed policy uses.",
+    architecturalRole: "resolver",
+    importance: "critical",
+    status: "confirmed",
+    reusable: true,
+    applicationCoupling: "low",
+  },
+  {
+    key: "sym:resolveSecretRefValue",
+    fileKey: "src/secrets/resolve.ts",
+    name: "resolveSecretRefValue",
+    kind: "function",
+    startLine: 858,
+    endLine: 884,
+    signature:
+      "async function resolveSecretRefValue(ref: SecretRef, options: ResolveSecretRefOptions): Promise<unknown>",
+    purpose:
+      "The runtime resolver that turns a SecretRef into an actual credential value by dispatching to the configured provider (env/file/exec). Supports an optional shared cache (options.cache) that dedupes in-flight resolutions for the same ref key so concurrent callers don't trigger duplicate provider calls (e.g. duplicate exec invocations).",
+    architecturalRole: "resolver",
+    importance: "critical",
+    status: "confirmed",
+    reusable: false,
+    applicationCoupling: "medium",
+  },
+  {
+    key: "sym:resolveSecretRefValues",
+    fileKey: "src/secrets/resolve.ts",
+    name: "resolveSecretRefValues / resolveSecretRefValuesSettledByProvider",
+    kind: "function",
+    startLine: 836,
+    endLine: 854,
+    signature:
+      "async function resolveSecretRefValues(refs: SecretRef[], options): Promise<Map<string, unknown>>",
+    purpose:
+      "Batch-resolves SecretRefs grouped by provider for bounded provider concurrency. Two error modes: resolveSecretRefValues throws on the first failure ('stop'); resolveSecretRefValuesSettledByProvider is the 'internal owner-isolation resolver' that isolates one provider's failure from others ('continue'), returning both resolved values and per-group failures -- this is the concrete mechanism behind root AGENTS.md's 'SecretRef failures isolate to the smallest known owning surface'.",
+    architecturalRole: "resolver",
+    importance: "critical",
+    status: "confirmed",
+    reusable: false,
+    applicationCoupling: "medium",
+  },
+  {
     key: "sym:openaiChatgptJwt",
     fileKey: "packages/ai/src/utils/oauth/openai-chatgpt-jwt.ts",
     name: "(ChatGPT OAuth JWT helper)",
@@ -108,6 +177,55 @@ export const oauthCapabilities: SeedCapability[] = [
     symbols: [
       { symbolKey: "sym:oauthAnthropic", role: "adapter" },
       { symbolKey: "sym:oauthOpenaiChatgpt", role: "adapter" },
+    ],
+  },
+  {
+    name: "SecretRef resolution",
+    category: "authentication",
+    status: "confirmed",
+    maturity: "production",
+    reusable: true,
+    description:
+      "A SecretRef ({ source: env|file|exec, provider, id }) is a config-level indirection for a credential value, resolved at runtime against a configured SecretProviderConfig. src/config/types.secrets.ts owns the type/coercion/fail-closed-read layer; src/secrets/resolve.ts owns the actual provider-dispatching resolution, batched and grouped by provider for bounded concurrency with an optional shared cache.",
+    implementationSummary:
+      "coerceSecretRef normalizes canonical/legacy/shorthand inputs into a SecretRef. resolveSecretInputString reads a config field to {available|configured_unavailable|missing}, throwing UnresolvedSecretInputError in strict mode. resolveSecretRefValue/resolveSecretRefValues (src/secrets/resolve.ts) do the actual per-provider resolution; resolveSecretRefValuesSettledByProvider is the 'owner-isolation' variant that isolates one provider's failure from the rest of a batch -- the concrete mechanism behind root AGENTS.md's fail-closed-per-owning-surface policy.",
+    symbols: [
+      { symbolKey: "sym:coerceSecretRef", role: "implementation" },
+      { symbolKey: "sym:resolveSecretInputString", role: "implementation" },
+      { symbolKey: "sym:resolveSecretRefValue", role: "implementation" },
+      { symbolKey: "sym:resolveSecretRefValues", role: "implementation" },
+    ],
+  },
+];
+
+export const oauthDataTypes: SeedDataType[] = [
+  {
+    key: "dt:SecretRef",
+    symbolKey: "sym:coerceSecretRef",
+    name: "SecretRef",
+    category: "credential",
+    status: "confirmed",
+    persistenceScope: "configuration",
+    providerSpecific: false,
+    purpose:
+      'src/config/types.secrets.ts:15-19. Stable identifier for a secret in a configured source: { source: "env"|"file"|"exec"; provider: string; id: string }. A config field\'s SecretInput type is `string | SecretRef` (a literal value or a reference). Providers are configured via SecretProviderConfig (EnvSecretProviderConfig with an optional allowlist; FileSecretProviderConfig with path/mode/timeoutMs/maxBytes; ExecSecretProviderConfig, either a manual command+args or a plugin-integration reference).',
+    fields: [
+      { name: "source", typeText: '"env" | "file" | "exec"', required: true, persisted: true },
+      {
+        name: "provider",
+        typeText: "string",
+        required: true,
+        persisted: true,
+        description:
+          'Named provider config (e.g. a specific vault/file/env source), default alias "default".',
+      },
+      {
+        name: "id",
+        typeText: "string",
+        required: true,
+        persisted: true,
+        description: "Provider-specific identifier, e.g. an env var name or vault path.",
+      },
     ],
   },
 ];
@@ -183,6 +301,31 @@ export const oauthEvidence: SeedEvidence[] = [
     confidence: 0.9,
     notes: "Confirmed via directory listing (ls); individual file contents not read this pass.",
   },
+  {
+    key: "ev:secretref-type-full",
+    fileKey: "src/config/types.secrets.ts",
+    symbolKey: "sym:coerceSecretRef",
+    startLine: 1,
+    endLine: 354,
+    claim:
+      'SecretRef is { source: "env"|"file"|"exec"; provider: string; id: string }, coerced from canonical/legacy/shorthand inputs by coerceSecretRef, and read via resolveSecretInputString which returns available/configured_unavailable/missing (throwing UnresolvedSecretInputError in strict mode for a configured-but-unresolved ref).',
+    evidenceType: "type-definition",
+    confidence: 1.0,
+    notes: "Read directly in full (354 lines).",
+  },
+  {
+    key: "ev:secretref-runtime-resolver",
+    fileKey: "src/secrets/resolve.ts",
+    symbolKey: "sym:resolveSecretRefValue",
+    startLine: 820,
+    endLine: 899,
+    claim:
+      "resolveSecretRefValue/resolveSecretRefValues dispatch a SecretRef to its configured provider and return the live value; resolveSecretRefValuesSettledByProvider is an explicit 'owner-isolation' resolver that isolates a failing provider's errors from the rest of a batch instead of failing the whole resolution.",
+    evidenceType: "implementation",
+    confidence: 1.0,
+    notes:
+      "Read lines 820-899 directly (the file is 899 lines total; the env/file/exec provider-dispatch branch itself, likely earlier in the file, was not read line-by-line).",
+  },
 ];
 
 export const oauthOpenQuestions: SeedOpenQuestion[] = [
@@ -191,15 +334,13 @@ export const oauthOpenQuestions: SeedOpenQuestion[] = [
     question:
       "What is the exact SecretRef resolution mechanism (type definition and resolver function) described in root AGENTS.md, and where does it live?",
     evidenceInspected:
-      "Searched for 'SecretRef' conceptually via root AGENTS.md description only; did not grep/read src/secrets/*.ts or src/plugin-sdk/*.ts for the actual type this pass.",
-    reasonUnresolved:
-      "Time/resource-constrained research pass prioritized the agent loop, provider architecture, and persistence schema over this specific mechanism.",
-    likelyInterpretation:
-      "Likely a discriminated-union type in src/secrets/ or src/plugin-sdk/ with a resolver that turns a {provider, kind, ref} tuple into a live credential value, given the 'fail-closed on unknown ownership' semantics described in root AGENTS.md.",
+      "RESOLVED in a follow-up pass: src/config/types.secrets.ts (read in full, 354 lines) defines SecretRef/SecretInput/SecretProviderConfig and the coerce/resolve-to-status layer (coerceSecretRef, resolveSecretInputString, UnresolvedSecretInputError). src/secrets/resolve.ts (read lines 820-899) defines the runtime provider-dispatching resolvers (resolveSecretRefValue, resolveSecretRefValues, resolveSecretRefValuesSettledByProvider), including the explicit 'owner-isolation' settled-by-provider variant.",
+    reasonUnresolved: "N/A -- resolved.",
+    likelyInterpretation: "N/A -- resolved with direct evidence.",
     verificationMethod:
-      "grep -rn 'SecretRef' src/secrets src/plugin-sdk, then read the resolver function and its call sites.",
-    priority: "high",
-    status: "open",
+      "Remaining depth gap: the actual env/file/exec provider-dispatch branch inside resolve.ts's ~820 lines before line 820 was not read line-by-line.",
+    priority: "low",
+    status: "resolved",
   },
   {
     category: "authentication",

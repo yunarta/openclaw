@@ -14,18 +14,9 @@ or `SELECT * FROM unresolved_high_priority;` directly against `catalog.sqlite`.
 
 | Priority | Count |
 | --- | --- |
-| high | 7 |
+| high | 6 |
 | medium | 3 |
-| low | 2 |
-
-## [high] What is the exact SecretRef resolution mechanism (type definition and resolver function) described in root AGENTS.md, and where does it live?
-
-- **Category:** authentication
-- **Status:** open
-- **Evidence inspected:** Searched for 'SecretRef' conceptually via root AGENTS.md description only; did not grep/read src/secrets/*.ts or src/plugin-sdk/*.ts for the actual type this pass.
-- **Why unresolved:** Time/resource-constrained research pass prioritized the agent loop, provider architecture, and persistence schema over this specific mechanism.
-- **Likely interpretation:** Likely a discriminated-union type in src/secrets/ or src/plugin-sdk/ with a resolver that turns a {provider, kind, ref} tuple into a live credential value, given the 'fail-closed on unknown ownership' semantics described in root AGENTS.md.
-- **How to verify:** grep -rn 'SecretRef' src/secrets src/plugin-sdk, then read the resolver function and its call sites.
+| low | 3 |
 
 ## [high] What is the exact discriminated-union type and full set of tag values for the internal agent-run event model (the AssistantMessageEventStreamContract's event payloads)?
 
@@ -80,6 +71,15 @@ or `SELECT * FROM unresolved_high_priority;` directly against `catalog.sqlite`.
 - **Why unresolved:** src/skills/loading and src/skills/runtime subdirectories were confirmed to exist but not opened this pass.
 - **Likely interpretation:** Likely a hybrid: a short skill index/description is always in context (for model-selection), with the full SKILL.md body fetched on demand via a tool when the skill is actually invoked -- consistent with the 'Skill' tool pattern referenced in root AGENTS.md ('Skills own workflows').
 - **How to verify:** Read src/skills/loading/*.ts and src/skills/runtime/*.ts in full, and find the model-facing tool (if any) that reads a SKILL.md body on demand.
+
+## [low] What is the exact SecretRef resolution mechanism (type definition and resolver function) described in root AGENTS.md, and where does it live?
+
+- **Category:** authentication
+- **Status:** resolved
+- **Evidence inspected:** RESOLVED in a follow-up pass: src/config/types.secrets.ts (read in full, 354 lines) defines SecretRef/SecretInput/SecretProviderConfig and the coerce/resolve-to-status layer (coerceSecretRef, resolveSecretInputString, UnresolvedSecretInputError). src/secrets/resolve.ts (read lines 820-899) defines the runtime provider-dispatching resolvers (resolveSecretRefValue, resolveSecretRefValues, resolveSecretRefValuesSettledByProvider), including the explicit 'owner-isolation' settled-by-provider variant.
+- **Why unresolved:** N/A -- resolved.
+- **Likely interpretation:** N/A -- resolved with direct evidence.
+- **How to verify:** Remaining depth gap: the actual env/file/exec provider-dispatch branch inside resolve.ts's ~820 lines before line 820 was not read line-by-line.
 
 ## [medium] Is provider OAuth token refresh triggered lazily (on-401) only, or also via a background scheduler?
 

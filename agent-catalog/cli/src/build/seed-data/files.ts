@@ -1001,6 +1001,20 @@ export const files: SeedFile[] = [
       "Confirmed to exist; applies a resolved secret/credential into runtime config (file not read line-by-line this pass).",
   },
   {
+    path: "src/config/types.secrets.ts",
+    category: "authentication",
+    importance: "critical",
+    purpose:
+      "Read in full (354 lines). Defines SecretRef ({source: env|file|exec, provider, id}), SecretInput (string | SecretRef), SecretProviderConfig (env/file/exec, including a plugin-integration exec variant), coerceSecretRef (normalizes canonical/legacy/shorthand inputs), resolveSecretInputString (available/configured_unavailable/missing), and UnresolvedSecretInputError (thrown by strict reads of an unresolved ref).",
+  },
+  {
+    path: "src/secrets/resolve.ts",
+    category: "authentication",
+    importance: "critical",
+    purpose:
+      "899 lines; read lines 820-899 this pass. Exports resolveSecretRefValue/resolveSecretRefValues (throws on first provider failure) and resolveSecretRefValuesSettledByProvider (isolates one provider's failure from the rest of a batch -- the 'owner-isolation' resolver), each grouping refs by provider for bounded concurrency with an optional shared in-flight-promise cache.",
+  },
+  {
     path: "src/secrets/audit.ts",
     category: "security",
     importance: "medium",

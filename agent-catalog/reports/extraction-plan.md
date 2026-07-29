@@ -18,11 +18,13 @@ Full guidance lives in `../EXTRACTION-GUIDE.md`; this report is the database-der
 - `isToolAllowed` (function, critical importance, low coupling) -- src/agents/sandbox/tool-policy.ts
 - `registerAgentHarness` (function, critical importance, low coupling) -- src/agents/harness/registry.ts
 - `registerBuiltInApiProviders` (function, critical importance, low coupling) -- packages/ai/src/providers.ts
+- `resolveSecretInputString` (function, critical importance, low coupling) -- src/config/types.secrets.ts
 - `stream` (function, critical importance, low coupling) -- src/llm/stream.ts
 - `(ChatGPT OAuth JWT helper)` (function, high importance, low coupling) -- packages/ai/src/utils/oauth/openai-chatgpt-jwt.ts
 - `(oauth.ts module)` (constant, high importance, low coupling) -- src/llm/oauth.ts
 - `Tool` (interface, high importance, low coupling) -- packages/llm-core/src/types.ts
 - `ValidateToolArgumentsFn` (type, high importance, low coupling) -- packages/llm-core/src/types.ts
+- `coerceSecretRef` (function, high importance, low coupling) -- src/config/types.secrets.ts
 - `complete` (function, high importance, low coupling) -- src/llm/stream.ts
 - `getRegisteredAgentHarness` (function, high importance, low coupling) -- src/agents/harness/registry.ts
 - `registerSandboxBackend` (function, high importance, low coupling) -- src/agents/sandbox/backend.ts
@@ -59,7 +61,6 @@ Full guidance lives in `../EXTRACTION-GUIDE.md`; this report is the database-der
 
 ## Unresolved high-priority questions
 
-- [high] What is the exact SecretRef resolution mechanism (type definition and resolver function) described in root AGENTS.md, and where does it live?
 - [high] Exactly how is a skill's SKILL.md content injected into the model's prompt -- fully upfront, or lazily via a tool call the model issues?
 - [high] Does a scheduled cron job execute through the same runEmbeddedAgent entry point as an interactive run, or a separate execution path?
 - [high] What module writes to and reads from the semantic memory index tables (memory_index_chunks, memory_embedding_cache)?

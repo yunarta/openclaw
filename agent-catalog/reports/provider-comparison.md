@@ -66,8 +66,8 @@ Codex is integrated as a full **AgentHarness** (drives the `@openai/codex` CLI's
 
 ## Open questions
 
-- [high] What is the exact SecretRef resolution mechanism (type definition and resolver function) described in root AGENTS.md, and where does it live?
-  Likely: Likely a discriminated-union type in src/secrets/ or src/plugin-sdk/ with a resolver that turns a {provider, kind, ref} tuple into a live credential value, given the 'fail-closed on unknown ownership' semantics described in root AGENTS.md.
+- [low] What is the exact SecretRef resolution mechanism (type definition and resolver function) described in root AGENTS.md, and where does it live?
+  Likely: N/A -- resolved with direct evidence.
 - [medium] Is provider OAuth token refresh triggered lazily (on-401) only, or also via a background scheduler?
   Likely: Probably both: a background timer refreshes proactively before expiry, with a lazy on-error refresh as a fallback for the run loop.
 
