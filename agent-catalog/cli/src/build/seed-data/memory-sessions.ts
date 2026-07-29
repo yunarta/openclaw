@@ -2,11 +2,29 @@ import type {
   SeedCapability,
   SeedPersistenceEntity,
   SeedMemorySystem,
+  SeedSymbol,
   SeedFlow,
   SeedFlowStep,
   SeedEvidence,
   SeedOpenQuestion,
 } from "../seed-types.js";
+
+export const memorySessionSymbols: SeedSymbol[] = [
+  {
+    key: "sym:executeCronRun",
+    fileKey: "src/cron/isolated-agent/run-executor.ts",
+    name: "executeCronRun",
+    kind: "function",
+    startLine: 610,
+    purpose:
+      'Cron\'s per-job run executor. Branches on whether the resolved provider is CLI-backed (runCliAgent, trigger: "cron") or embedded (runEmbeddedAgent, trigger: "cron", bootstrapContextRunKind: "cron") -- the same two entry points an interactive run uses, distinguished only by a run-kind hint, not a separate execution path.',
+    architecturalRole: "orchestrator",
+    importance: "critical",
+    status: "confirmed",
+    reusable: false,
+    applicationCoupling: "high",
+  },
+];
 
 export const persistenceEntities: SeedPersistenceEntity[] = [
   {
@@ -304,8 +322,8 @@ export const memoryCapabilities: SeedCapability[] = [
     description:
       "Scheduled/background jobs (src/cron/) are a distinct concept from an interactive multi-turn agent run, with their own active-job tracking, command execution, delivery, and heartbeat monitoring.",
     implementationSummary:
-      "src/cron/active-jobs.ts, command-runner.ts, delivery.ts, heartbeat-monitor.ts confirmed to exist; whether a scheduled job invokes the same runEmbeddedAgent entry point as an interactive run was not confirmed this pass.",
-    symbols: [],
+      'RESOLVED in a follow-up pass: src/cron/isolated-agent/run-executor.ts\'s executeCronRun branches on whether the resolved provider is CLI-backed (runCliAgent, the same opt-in subscription-auth fork interactive CLI-backend runs use) or embedded -- in which case it calls runEmbeddedAgent (src/cron/isolated-agent/run-embedded.runtime.ts re-exports it directly from src/agents/embedded-agent.js), the identical entry point an interactive run calls. Cron passes trigger: "cron", jobId, and bootstrapContextRunKind: "cron" as run-kind hints, not a separate execution path.',
+    symbols: [{ symbolKey: "sym:executeCronRun", role: "entry-point" }],
   },
 ];
 
@@ -313,12 +331,14 @@ export const memorySessionFlows: SeedFlow[] = [
   {
     name: "long-running run",
     category: "long-running",
-    status: "inferred",
+    status: "confirmed",
+    entrySymbolKey: "sym:executeCronRun",
     description:
-      "Best-effort reconstruction: a cron-scheduled job (src/cron/active-jobs.ts) triggers at its scheduled time, executes via command-runner.ts, and delivers its result via delivery.ts -- most likely by invoking the same embedded-agent-runner entry point as an interactive run, but this specific link was not confirmed by reading source this pass.",
-    terminationCondition: "Not confirmed.",
+      'RESOLVED in a follow-up pass: a cron-scheduled job triggers at its scheduled time and is executed by src/cron/isolated-agent/run-executor.ts\'s executeCronRun, which calls either runCliAgent (CLI-backed provider) or runEmbeddedAgent (embedded provider) -- the exact same entry points an interactive run uses, tagged with trigger: "cron" / bootstrapContextRunKind: "cron" rather than routed through a separate execution path.',
+    terminationCondition:
+      "Same as any embedded/CLI run: the run loop reaches a terminal state (end/error/timeout) via the shared agent-run-terminal-outcome normalization.",
     errorBehavior:
-      "heartbeat-monitor.ts / heartbeat-policy.ts suggest liveness is monitored and a stuck job can be detected, but the exact recovery action was not confirmed.",
+      "heartbeat-monitor.ts / heartbeat-policy.ts suggest liveness is monitored and a stuck job can be detected, but the exact recovery action was not confirmed this pass.",
   },
   {
     name: "checkpoint save",
@@ -369,6 +389,18 @@ export const memorySessionFlowSteps: SeedFlowStep[] = [
 
 export const memorySessionEvidence: SeedEvidence[] = [
   {
+    key: "ev:cron-runs-embedded-agent",
+    fileKey: "src/cron/isolated-agent/run-executor.ts",
+    symbolKey: "sym:executeCronRun",
+    startLine: 399,
+    endLine: 570,
+    claim:
+      'executeCronRun calls runCliAgent for CLI-backed providers or runEmbeddedAgent for embedded providers, both tagged trigger: "cron" -- the identical entry points an interactive run uses, confirmed further by src/cron/isolated-agent/run-embedded.runtime.ts re-exporting runEmbeddedAgent directly from src/agents/embedded-agent.js with no cron-specific wrapper.',
+    evidenceType: "implementation",
+    confidence: 1.0,
+    notes: "Read directly.",
+  },
+  {
     key: "ev:agent-db-schema-tables",
     fileKey: "src/state/openclaw-agent-schema.sql",
     claim:
@@ -396,15 +428,12 @@ export const memorySessionOpenQuestions: SeedOpenQuestion[] = [
     question:
       "Does a scheduled cron job execute through the same runEmbeddedAgent entry point as an interactive run, or a separate execution path?",
     evidenceInspected:
-      "src/cron/active-jobs.ts and command-runner.ts confirmed to exist; not opened this pass.",
-    reasonUnresolved:
-      "Deprioritized in favor of confirming the interactive agent-loop and provider architecture given constrained research time.",
-    likelyInterpretation:
-      "Likely the same entry point, given root AGENTS.md's emphasis on one canonical execution path per concept, but not confirmed.",
-    verificationMethod:
-      "Read src/cron/command-runner.ts and grep for 'runEmbeddedAgent' or 'runAgentHarnessLifecycleAttempt' call sites within src/cron/.",
+      'RESOLVED in a follow-up pass: read src/cron/isolated-agent/run-executor.ts\'s executeCronRun (the branching call sites around lines 399-570) and src/cron/isolated-agent/run-embedded.runtime.ts (4-line re-export seam) in full. Confirmed: yes, the same entry point (runEmbeddedAgent, or runCliAgent for CLI-backed providers -- both identical to the interactive path), distinguished only by trigger: "cron" / bootstrapContextRunKind: "cron" run-kind hints, not a separate execution path.',
+    reasonUnresolved: "N/A -- resolved.",
+    likelyInterpretation: "N/A -- resolved with direct evidence.",
+    verificationMethod: "N/A -- resolved.",
     priority: "high",
-    status: "open",
+    status: "resolved",
   },
   {
     category: "memory",

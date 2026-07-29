@@ -891,6 +891,20 @@ export const files: SeedFile[] = [
       "Confirmed to exist; heartbeat policy configuration for cron jobs (test file name suggests: heartbeat-policy.test.ts).",
   },
   {
+    path: "src/cron/isolated-agent/run-executor.ts",
+    category: "long-running",
+    importance: "critical",
+    purpose:
+      'Read the branching call sites in full (lines ~399-570, 827 lines total file). Exports executeCronRun: resolves the run\'s provider, then branches to runCliAgent (CLI-backed provider, e.g. subscription-auth fork) or runEmbeddedAgent (embedded provider) -- the same two entry points an interactive run uses -- passing trigger: "cron", jobId, and bootstrapContextRunKind: "cron" as run-kind hints rather than routing through a separate execution path.',
+  },
+  {
+    path: "src/cron/isolated-agent/run-embedded.runtime.ts",
+    category: "long-running",
+    importance: "critical",
+    purpose:
+      'Read in full (4 lines). A pure re-export seam: `export { runEmbeddedAgent } from "../../agents/embedded-agent.js"` (plus resolveFastModeState, resolveCronAgentLane) -- confirms cron has no cron-specific embedded-run implementation of its own; it calls the exact same function an interactive run calls.',
+  },
+  {
     path: "src/agents/agent-run-terminal-outcome.ts",
     category: "agent-runtime",
     importance: "critical",

@@ -25,6 +25,7 @@ import {
 import {
   persistenceEntities,
   memorySystems,
+  memorySessionSymbols,
   memoryCapabilities,
   memorySessionFlows,
   memorySessionFlowSteps,
@@ -96,6 +97,7 @@ export function buildCatalogSeed(): CatalogSeed {
       ...sandboxSymbols,
       ...skillSymbols,
       ...gatewayProtocolSymbols,
+      ...memorySessionSymbols,
     ],
     capabilities: [
       ...agentLoopCapabilities,

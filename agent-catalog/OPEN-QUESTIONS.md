@@ -39,11 +39,11 @@ or `SELECT * FROM unresolved_high_priority;` directly against `catalog.sqlite`.
 ## [high] Does a scheduled cron job execute through the same runEmbeddedAgent entry point as an interactive run, or a separate execution path?
 
 - **Category:** long-running-execution
-- **Status:** open
-- **Evidence inspected:** src/cron/active-jobs.ts and command-runner.ts confirmed to exist; not opened this pass.
-- **Why unresolved:** Deprioritized in favor of confirming the interactive agent-loop and provider architecture given constrained research time.
-- **Likely interpretation:** Likely the same entry point, given root AGENTS.md's emphasis on one canonical execution path per concept, but not confirmed.
-- **How to verify:** Read src/cron/command-runner.ts and grep for 'runEmbeddedAgent' or 'runAgentHarnessLifecycleAttempt' call sites within src/cron/.
+- **Status:** resolved
+- **Evidence inspected:** RESOLVED in a follow-up pass: read src/cron/isolated-agent/run-executor.ts's executeCronRun (the branching call sites around lines 399-570) and src/cron/isolated-agent/run-embedded.runtime.ts (4-line re-export seam) in full. Confirmed: yes, the same entry point (runEmbeddedAgent, or runCliAgent for CLI-backed providers -- both identical to the interactive path), distinguished only by trigger: "cron" / bootstrapContextRunKind: "cron" run-kind hints, not a separate execution path.
+- **Why unresolved:** N/A -- resolved.
+- **Likely interpretation:** N/A -- resolved with direct evidence.
+- **How to verify:** N/A -- resolved.
 
 ## [high] Can an interrupted embedded run (process crash mid-turn, not a CLI-backend session) be resumed after restart, and if so, from what durable state?
 
