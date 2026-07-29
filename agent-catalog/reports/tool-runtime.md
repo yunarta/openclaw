@@ -66,10 +66,10 @@ OpenClaw supports Model Context Protocol servers as a tool source, evidenced by 
 
 ## Open questions
 
-- [high] Is tool execution sandboxed (subprocess isolation, filesystem/network restriction), and if so, how?
-  Likely: Likely partial: shell/exec-family tools probably run through an exec-approval/sandbox policy (exec_approvals_config table confirmed in src/state/openclaw-state-schema.sql), while most tools run in-process with no OS-level sandbox.
 - [low] Is a tool call's inputSchema validated with a specific library (zod, ajv, a custom JSON-Schema validator), and where?
   Likely: packages/llm-core/src/validation.ts (confirmed to exist, has its own validation.test.ts) almost certainly implements ValidateToolArgumentsFn.
+- [low] Is tool execution sandboxed (subprocess isolation, filesystem/network restriction), and if so, how?
+  Likely: N/A -- resolved with direct evidence.
 - [medium] What is the exact function that dispatches a normalized provider tool-call event to a resolved ToolDescriptor's executor?
   Likely: toolSearchCatalogExecutor's name ('tool search catalog') suggests OpenClaw may have more than one tool-resolution path (e.g. a smaller always-in-context tool set vs. a larger searchable catalog); whether every tool call funnels through this exact function or whether a second, simpler direct-dispatch path also exists was not fully ruled out.
 

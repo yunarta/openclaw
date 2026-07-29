@@ -468,13 +468,13 @@ export const toolOpenQuestions: SeedOpenQuestion[] = [
     question:
       "Is tool execution sandboxed (subprocess isolation, filesystem/network restriction), and if so, how?",
     evidenceInspected:
-      "src/security/ directory exists at the repo root (confirmed via initial top-level listing) but was not opened this pass.",
-    reasonUnresolved: "Not traced this pass.",
-    likelyInterpretation:
-      "Likely partial: shell/exec-family tools probably run through an exec-approval/sandbox policy (exec_approvals_config table confirmed in src/state/openclaw-state-schema.sql), while most tools run in-process with no OS-level sandbox.",
+      "RESOLVED in a follow-up pass: src/agents/sandbox.ts (read in full) and src/agents/sandbox/tool-policy.ts (read in full) confirm a pluggable Docker/SSH backend registry plus a per-tool allow/deny policy. src/config/types.sandbox.ts (read in full) confirms the Docker hardening surface (readOnlyRoot, capDrop, seccomp/AppArmor, resource limits, hardened bind-mount defaults). src/security/ was correctly identified as a SEPARATE thing (a configuration-hygiene auditor), not the sandbox mechanism -- so the earlier likely-interpretation guessing at exec_approvals_config as the sandbox mechanism was a red herring.",
+    reasonUnresolved:
+      "N/A -- resolved. See the tool-sandbox-runtime module and 'sandboxing' capability for the full picture.",
+    likelyInterpretation: "N/A -- resolved with direct evidence.",
     verificationMethod:
-      "Read src/security/*.ts and cross-reference the exec_approvals_config table's writer/reader symbols.",
-    priority: "high",
-    status: "open",
+      "Remaining depth gap: docker-backend.ts, ssh-backend.ts, fs-bridge.ts, and validate-sandbox-security.ts were confirmed to exist and skimmed via exports but not read line-by-line; a future pass could read those for exact command-construction detail.",
+    priority: "low",
+    status: "resolved",
   },
 ];

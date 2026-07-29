@@ -74,14 +74,14 @@ export const extraCapabilities: SeedCapability[] = [
   {
     name: "sandboxing",
     category: "security",
-    status: "inferred",
-    maturity: "unknown",
-    reusable: false,
+    status: "confirmed",
+    maturity: "production",
+    reusable: true,
     description:
-      "An exec_approvals_config table exists in the shared state DB, suggesting shell/exec-tool calls are gated by an approval/sandbox policy, but the exact sandbox mechanism (subprocess isolation? filesystem/network restriction?) was not located and read this pass.",
+      "RESOLVED in a follow-up pass: src/agents/sandbox/ is a pluggable tool-execution sandbox with two registered backends -- Docker (container isolation: read-only rootfs, capability dropping, seccomp/AppArmor, resource limits, network modes, hardened bind-mount defaults) and SSH (remote-host execution). Independently of the backend, a per-tool allow/deny glob-pattern policy (isToolAllowed, merged across default/global/agent scope) decides which tools even reach the sandbox. src/security/'s audit-*.ts files are a DIFFERENT thing -- OpenClaw's own configuration-hygiene auditor, not the sandbox mechanism.",
     implementationSummary:
-      "src/security/ (top-level directory, confirmed to exist, not opened this pass) is the most likely home for this logic.",
-    symbols: [],
+      "See the tool-sandbox-runtime module for the full file/symbol map. isToolAllowed (src/agents/sandbox/tool-policy.ts:218-221) is the policy gate; registerSandboxBackend/getSandboxBackendFactory (backend.ts) is the pluggable-backend seam Docker and SSH each register into.",
+    symbols: [{ symbolKey: "sym:isToolAllowed", role: "policy" }],
   },
 ];
 

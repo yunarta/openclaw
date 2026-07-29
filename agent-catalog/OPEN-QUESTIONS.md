@@ -14,9 +14,9 @@ or `SELECT * FROM unresolved_high_priority;` directly against `catalog.sqlite`.
 
 | Priority | Count |
 | --- | --- |
-| high | 8 |
+| high | 7 |
 | medium | 3 |
-| low | 1 |
+| low | 2 |
 
 ## [high] What is the exact SecretRef resolution mechanism (type definition and resolver function) described in root AGENTS.md, and where does it live?
 
@@ -81,15 +81,6 @@ or `SELECT * FROM unresolved_high_priority;` directly against `catalog.sqlite`.
 - **Likely interpretation:** Likely a hybrid: a short skill index/description is always in context (for model-selection), with the full SKILL.md body fetched on demand via a tool when the skill is actually invoked -- consistent with the 'Skill' tool pattern referenced in root AGENTS.md ('Skills own workflows').
 - **How to verify:** Read src/skills/loading/*.ts and src/skills/runtime/*.ts in full, and find the model-facing tool (if any) that reads a SKILL.md body on demand.
 
-## [high] Is tool execution sandboxed (subprocess isolation, filesystem/network restriction), and if so, how?
-
-- **Category:** tool-runtime
-- **Status:** open
-- **Evidence inspected:** src/security/ directory exists at the repo root (confirmed via initial top-level listing) but was not opened this pass.
-- **Why unresolved:** Not traced this pass.
-- **Likely interpretation:** Likely partial: shell/exec-family tools probably run through an exec-approval/sandbox policy (exec_approvals_config table confirmed in src/state/openclaw-state-schema.sql), while most tools run in-process with no OS-level sandbox.
-- **How to verify:** Read src/security/*.ts and cross-reference the exec_approvals_config table's writer/reader symbols.
-
 ## [medium] Is provider OAuth token refresh triggered lazily (on-401) only, or also via a background scheduler?
 
 - **Category:** authentication
@@ -125,4 +116,13 @@ or `SELECT * FROM unresolved_high_priority;` directly against `catalog.sqlite`.
 - **Why unresolved:** The exact call site invoking ValidateToolArgumentsFn against a live ToolCall, and the ToolDescriptor.inputSchema-to-TypeBox bridge, were not located this pass.
 - **Likely interpretation:** packages/llm-core/src/validation.ts (confirmed to exist, has its own validation.test.ts) almost certainly implements ValidateToolArgumentsFn.
 - **How to verify:** Read packages/llm-core/src/validation.ts in full.
+
+## [low] Is tool execution sandboxed (subprocess isolation, filesystem/network restriction), and if so, how?
+
+- **Category:** tool-runtime
+- **Status:** resolved
+- **Evidence inspected:** RESOLVED in a follow-up pass: src/agents/sandbox.ts (read in full) and src/agents/sandbox/tool-policy.ts (read in full) confirm a pluggable Docker/SSH backend registry plus a per-tool allow/deny policy. src/config/types.sandbox.ts (read in full) confirms the Docker hardening surface (readOnlyRoot, capDrop, seccomp/AppArmor, resource limits, hardened bind-mount defaults). src/security/ was correctly identified as a SEPARATE thing (a configuration-hygiene auditor), not the sandbox mechanism -- so the earlier likely-interpretation guessing at exec_approvals_config as the sandbox mechanism was a red herring.
+- **Why unresolved:** N/A -- resolved. See the tool-sandbox-runtime module and 'sandboxing' capability for the full picture.
+- **Likely interpretation:** N/A -- resolved with direct evidence.
+- **How to verify:** Remaining depth gap: docker-backend.ts, ssh-backend.ts, fs-bridge.ts, and validate-sandbox-security.ts were confirmed to exist and skimmed via exports but not read line-by-line; a future pass could read those for exact command-construction detail.
 

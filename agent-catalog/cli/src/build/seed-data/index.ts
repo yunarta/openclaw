@@ -41,6 +41,15 @@ import {
   providerRelationships,
 } from "./providers.js";
 import { repository } from "./repository.js";
+import {
+  sandboxFiles,
+  sandboxModules,
+  sandboxSymbols,
+  sandboxDataTypes,
+  sandboxEvidence,
+  sandboxFindings,
+  sandboxOpenQuestions,
+} from "./sandbox.js";
 import { skillDataTypes, seedSkills, skillEvidence, skillOpenQuestions } from "./skills.js";
 import {
   toolCapabilities,
@@ -56,9 +65,15 @@ import {
 export function buildCatalogSeed(): CatalogSeed {
   return {
     repository,
-    files,
-    modules,
-    symbols: [...agentLoopSymbols, ...providerSymbols, ...oauthSymbols, ...toolSymbols],
+    files: [...files, ...sandboxFiles],
+    modules: [...modules, ...sandboxModules],
+    symbols: [
+      ...agentLoopSymbols,
+      ...providerSymbols,
+      ...oauthSymbols,
+      ...toolSymbols,
+      ...sandboxSymbols,
+    ],
     capabilities: [
       ...agentLoopCapabilities,
       ...providerCapabilities,
@@ -74,6 +89,7 @@ export function buildCatalogSeed(): CatalogSeed {
       ...toolEvidence,
       ...skillEvidence,
       ...memorySessionEvidence,
+      ...sandboxEvidence,
     ],
     relationships: [...agentLoopRelationships, ...providerRelationships],
     flows: [
@@ -90,20 +106,27 @@ export function buildCatalogSeed(): CatalogSeed {
       ...toolFlowSteps,
       ...memorySessionFlowSteps,
     ],
-    dataTypes: [...providerDataTypes, ...toolDataTypes, ...skillDataTypes, ...eventDataTypes],
+    dataTypes: [
+      ...providerDataTypes,
+      ...toolDataTypes,
+      ...skillDataTypes,
+      ...eventDataTypes,
+      ...sandboxDataTypes,
+    ],
     events: seedEvents,
     tools: seedTools,
     skills: seedSkills,
     memorySystems,
     persistenceEntities,
     snippets: [...agentLoopSnippets, ...providerSnippets],
-    findings: [...providerFindings, ...extraFindings],
+    findings: [...providerFindings, ...extraFindings, ...sandboxFindings],
     openQuestions: [
       ...oauthOpenQuestions,
       ...toolOpenQuestions,
       ...skillOpenQuestions,
       ...memorySessionOpenQuestions,
       ...extraOpenQuestions,
+      ...sandboxOpenQuestions,
     ],
   };
 }
