@@ -30,6 +30,7 @@ Full guidance lives in `../EXTRACTION-GUIDE.md`; this report is the database-der
 - `listRegisteredAgentHarnesses` (function, medium importance, low coupling) -- src/agents/harness/registry.ts
 - `streamSimple` (function, medium importance, low coupling) -- src/llm/stream.ts
 - `disposeRegisteredAgentHarnesses` (function, low importance, low coupling) -- src/agents/harness/registry.ts
+- `AnyAgentTool` (type, critical importance, medium coupling) -- src/agents/tools/common.ts
 - `createEmbeddedRunLaneController` (factory, critical importance, medium coupling) -- src/agents/embedded-agent-runner/run/lane-controller.ts
 - `normalizeAgentRunAttemptTerminal` (function, critical importance, medium coupling) -- src/agents/agent-run-terminal-outcome.ts
 - `resolveRunFailoverDecision` (function, critical importance, medium coupling) -- src/agents/embedded-agent-runner/run/failover-policy.ts
@@ -56,7 +57,6 @@ Full guidance lives in `../EXTRACTION-GUIDE.md`; this report is the database-der
 ## Unresolved high-priority questions
 
 - [high] What is the exact SecretRef resolution mechanism (type definition and resolver function) described in root AGENTS.md, and where does it live?
-- [high] What is the exact function that dispatches a normalized provider tool-call event to a resolved ToolDescriptor's executor?
 - [high] Is tool execution sandboxed (subprocess isolation, filesystem/network restriction), and if so, how?
 - [high] Exactly how is a skill's SKILL.md content injected into the model's prompt -- fully upfront, or lazily via a tool call the model issues?
 - [high] Does a scheduled cron job execute through the same runEmbeddedAgent entry point as an interactive run, or a separate execution path?

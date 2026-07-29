@@ -6,7 +6,62 @@ import type {
   SeedTool,
   SeedEvidence,
   SeedOpenQuestion,
+  SeedSymbol,
 } from "../seed-types.js";
+
+export const toolSymbols: SeedSymbol[] = [
+  {
+    key: "sym:runToolLifecycle",
+    fileKey: "src/agents/embedded-agent-subscribe.ts",
+    name: "runToolLifecycle",
+    kind: "function",
+    startLine: 1436,
+    endLine: 1476,
+    signature:
+      "runToolLifecycle: async <T>(toolParams: { toolName; toolCallId; args; replaySafe?; hideFromChannelProgress?; execute: () => Promise<T> }) => Promise<T>",
+    purpose:
+      "The tool-call dispatch lifecycle wrapper: emits a tool_execution_start event, awaits the caller-supplied execute() closure, then emits tool_execution_end with either the result (isError: false) or a normalized error result (isError: true) before rethrowing. Every tool invocation observed this pass goes through this wrapper.",
+    architecturalRole: "dispatcher",
+    importance: "critical",
+    status: "confirmed",
+    reusable: false,
+    applicationCoupling: "high",
+  },
+  {
+    key: "sym:toolSearchCatalogExecutor",
+    fileKey: "src/agents/embedded-agent-runner/run/attempt-stream-prepare.ts",
+    name: "toolSearchCatalogExecutor",
+    kind: "function",
+    startLine: 292,
+    endLine: 330,
+    signature:
+      "const toolSearchCatalogExecutor: ToolSearchCatalogToolExecutor = async (toolParams) => { ... }",
+    purpose:
+      "Confirmed call site that resolves a matched tool object and invokes it: calls subscription.runToolLifecycle({ ...args, execute: () => toolParams.tool.execute(toolCallId, input, signal, onUpdate) }), then pushes the accepted result into the transcript projection queue. Named for the 'tool search catalog' path; whether every tool call (not only tool-search-catalog-resolved ones) funnels through this exact function was not fully confirmed this pass.",
+    architecturalRole: "dispatcher",
+    importance: "high",
+    status: "confirmed",
+    reusable: false,
+    applicationCoupling: "high",
+  },
+  {
+    key: "sym:AnyAgentTool.execute",
+    fileKey: "src/agents/tools/common.ts",
+    name: "AnyAgentTool",
+    kind: "type",
+    startLine: 44,
+    endLine: 69,
+    signature:
+      'type AnyAgentTool = Omit<AgentTool, "execute"> & { execute(this: void, toolCallId: string, params: unknown, signal?: AbortSignal, onUpdate?: AgentToolUpdateCallback): Promise<AgentToolResult<unknown>> }',
+    purpose:
+      "Type-erased tool-implementation contract every built-in tool satisfies. `execute` is the per-tool business logic invoked by runToolLifecycle's execute closure. AgentTool<TParameters extends TSchema, TResult> is the non-erased generic form imported from ../runtime/index.js, parameterizing the tool's argument schema as a TypeBox TSchema -- the same schema library used by the wire-level Tool type in packages/llm-core.",
+    architecturalRole: "interface",
+    importance: "critical",
+    status: "confirmed",
+    reusable: true,
+    applicationCoupling: "medium",
+  },
+];
 
 export const toolCapabilities: SeedCapability[] = [
   {
@@ -16,22 +71,26 @@ export const toolCapabilities: SeedCapability[] = [
     maturity: "production",
     reusable: true,
     description:
-      "A tool is declared as a ToolDescriptor: name, description, inputSchema/outputSchema (JSON Schema-shaped JsonObject), an owner ref (core/plugin/channel/mcp), an optional distinct executor ref, and a declarative availability expression (allOf/anyOf over auth/config/env/plugin-enabled/context signals).",
+      "Two related but distinct contracts exist: ToolDescriptor (src/tools/types.ts) is a JSON-serializable metadata/availability descriptor (owner/executor refs, plain-JsonObject inputSchema, declarative availability expression) used for discovery/planning; AgentTool / AnyAgentTool (src/agents/runtime/index.ts, src/agents/tools/common.ts) is the actual runtime implementation contract, typing its parameters as a TypeBox TSchema and exposing execute(toolCallId, params, signal, onUpdate).",
     implementationSummary:
-      "src/tools/types.ts defines ToolDescriptor and its component types; individual tools are implemented under src/agents/tools/*.ts (ask-user, agents-list, agents-wait, sessions-spawn, cron, gateway, dashboard, etc.).",
-    symbols: [],
+      "Individual tools are implemented under src/agents/tools/*.ts (ask-user, agents-list, agents-wait, sessions-spawn, cron, gateway, dashboard, etc.), each presumably satisfying AgentTool and registered into the set createOpenClawCodingTools() (src/agents/agent-tools.ts:1190) assembles into an AnyAgentTool[] for a run.",
+    symbols: [{ symbolKey: "sym:AnyAgentTool.execute", role: "interface" }],
   },
   {
     name: "tool dispatch",
     category: "tool-runtime",
-    status: "inferred",
+    status: "confirmed",
     maturity: "production",
     reusable: false,
     description:
-      "When a provider stream emits a tool-call event, it is matched against a registered ToolDescriptor and routed to that tool's executor. The exact dispatcher function was not located and read line-by-line this pass (see open_questions) -- src/agents/agent-tools.before-tool-call.approval.ts is confirmed to sit on this path as the approval gate.",
+      "Confirmed this pass: runToolLifecycle (src/agents/embedded-agent-subscribe.ts:1436-1476) wraps every observed tool invocation with tool_execution_start/tool_execution_end lifecycle events. At least one caller, toolSearchCatalogExecutor (attempt-stream-prepare.ts:292-330), resolves a matched AnyAgentTool and calls it via `execute: () => toolParams.tool.execute(toolCallId, input, signal, onUpdate)` inside runToolLifecycle.",
     implementationSummary:
-      "Best-effort reconstruction from file names and the ToolDescriptor executor-ref shape: normalize provider tool-call -> resolve ToolDescriptor by name -> validate args against inputSchema -> evaluate availability/approval -> execute via the executor ref's target (core/plugin/channel/mcp) -> normalize result -> append to continuation.",
-    symbols: [],
+      "receive normalized provider tool-call event -> resolve the matching AnyAgentTool -> runToolLifecycle emits tool_execution_start -> tool.execute(...) runs -> runToolLifecycle emits tool_execution_end (success or normalized error) -> result pushed into the transcript projection queue -> appended to the continuation as a tool-result message.",
+    symbols: [
+      { symbolKey: "sym:runToolLifecycle", role: "dispatcher" },
+      { symbolKey: "sym:toolSearchCatalogExecutor", role: "dispatcher" },
+      { symbolKey: "sym:AnyAgentTool.execute", role: "implementation" },
+    ],
   },
   {
     name: "tool approval",
@@ -48,13 +107,14 @@ export const toolCapabilities: SeedCapability[] = [
   {
     name: "tool execution",
     category: "tool-runtime",
-    status: "inferred",
+    status: "confirmed",
     maturity: "production",
     reusable: false,
-    description: "Execution context and cancellation for a running tool call.",
+    description:
+      "Execution context: runToolLifecycle's execute closure receives a toolCallId, decoded arguments, an AbortSignal (either the tool-call-specific signal or the run's abort controller), and an onUpdate progress callback -- confirmed directly from AnyAgentTool.execute's signature and its call site in attempt-stream-prepare.ts.",
     implementationSummary:
-      "src/agents/agent-tools.abort.ts confirmed to exist for tool-call-scoped cancellation. Sandbox/isolation mechanics were not located this pass.",
-    symbols: [],
+      "src/agents/agent-tools.abort.ts confirmed to exist for tool-call-scoped cancellation, consistent with the signal parameter threaded through execute(). Sandbox/isolation mechanics (OS-level, not just AbortSignal-based cancellation) were not located this pass -- see the 'sandboxing' capability/open question.",
+    symbols: [{ symbolKey: "sym:AnyAgentTool.execute", role: "implementation" }],
   },
   {
     name: "MCP",
@@ -74,13 +134,14 @@ export const toolFlows: SeedFlow[] = [
   {
     name: "tool call",
     category: "tool-runtime",
-    status: "inferred",
+    status: "confirmed",
+    entrySymbolKey: "sym:runToolLifecycle",
     description:
-      "Best-effort reconstruction of the canonical tool-call flow from a normalized provider tool-call event to a model-visible tool-result message, based on the ToolDescriptor contract and the confirmed approval/abort hook points. Individual dispatcher/executor symbols were not read line-by-line this pass -- see open_questions before treating this as ground truth.",
+      "The canonical tool-call flow from a normalized provider tool-call event to a model-visible tool-result message. Steps 4 (approval) and the executor-ref-based routing generality in step 5 remain partly inferred -- see step-level status.",
     terminationCondition:
       "A tool-result message (success or normalized error) is appended to the run's continuation state and the loop proceeds to the next provider call.",
     errorBehavior:
-      "isToolResultError (src/agents/tool-result-error.ts) classifies a tool result as an error for downstream retry/finalization decisions.",
+      "isToolResultError (src/agents/tool-result-error.ts) classifies a tool result as an error for downstream retry/finalization decisions; runToolLifecycle emits tool_execution_end with isError: true and a normalized error result before rethrowing.",
   },
   {
     name: "tool approval",
@@ -100,23 +161,23 @@ export const toolFlowSteps: SeedFlowStep[] = [
     stepOrder: 1,
     title: "Receive normalized provider tool-call event",
     description:
-      "The stream-normalization layer (src/llm/stream.ts / packages/ai transports) emits a tool-call event as part of the AssistantMessageEventStreamContract.",
+      "The stream-normalization layer (src/llm/stream.ts / packages/ai transports) emits toolcall_start/toolcall_delta/toolcall_end events (packages/llm-core/src/types.ts:410-412) as part of the AssistantMessageEventStreamContract; toolcall_end carries the fully parsed ToolCall.",
   },
   {
     flowName: "tool call",
     stepOrder: 2,
-    title: "Resolve the ToolDescriptor by name",
+    title: "Resolve the matching AnyAgentTool",
     description:
-      "The tool-call's name is matched against the run's currently available tool set (itself already filtered by each ToolDescriptor's availability expression).",
+      "The tool-call's name is matched against the run's currently available tool set (itself already filtered by each ToolDescriptor's availability expression / the effective-tool-policy machinery).",
     fileKey: "src/tools/types.ts",
   },
   {
     flowName: "tool call",
     stepOrder: 3,
-    title: "Validate decoded arguments against inputSchema",
+    title: "Validate/decode arguments",
     description:
-      "Not directly confirmed by reading a validator this pass; assumed from the presence of a typed inputSchema (JsonObject) on ToolDescriptor.",
-    alternatePath: "See open_questions: exact validation library/point not located.",
+      "AgentTool<TParameters extends TSchema> types tool parameters as a TypeBox schema at the implementation level (src/agents/tools/common.ts), and packages/llm-core's wire-level Tool.parameters is likewise a TypeBox TSchema validated by ValidateToolArgumentsFn (packages/llm-core/src/types.ts:691) -- confirming TypeBox as the schema/validation library used for tool arguments. The exact call site invoking ValidateToolArgumentsFn against a live ToolCall was not located this pass.",
+    alternatePath: "See open_questions: exact ValidateToolArgumentsFn call site not located.",
   },
   {
     flowName: "tool call",
@@ -129,16 +190,18 @@ export const toolFlowSteps: SeedFlowStep[] = [
   {
     flowName: "tool call",
     stepOrder: 5,
-    title: "Execute via the tool's executor ref",
+    title: "Dispatch through runToolLifecycle",
     description:
-      "Routed to a core executorId, a plugin's toolName, a channel's actionId, or an MCP server's toolName, per ToolExecutorRef.",
-    fileKey: "src/tools/types.ts",
+      "runToolLifecycle emits tool_execution_start, then calls the resolved AnyAgentTool's execute(toolCallId, params, signal, onUpdate).",
+    symbolKey: "sym:runToolLifecycle",
+    fileKey: "src/agents/embedded-agent-subscribe.ts",
   },
   {
     flowName: "tool call",
     stepOrder: 6,
     title: "Normalize errors / classify result",
-    description: "isToolResultError classifies the outcome for retry/finalization purposes.",
+    description:
+      "runToolLifecycle emits tool_execution_end with isError: false and the result on success, or isError: true with a normalized error result on failure (rethrowing after emitting). isToolResultError (src/agents/tool-result-error.ts) further classifies the outcome for retry/finalization purposes.",
     fileKey: "src/agents/tool-result-error.ts",
   },
   {
@@ -146,7 +209,7 @@ export const toolFlowSteps: SeedFlowStep[] = [
     stepOrder: 7,
     title: "Append tool-result message to continuation",
     description:
-      "The run loop's per-attempt continuation state gains a tool-result message before the next provider call in the same attempt/turn.",
+      "The accepted result is pushed into the transcript projection queue (toolSearchTargetTranscriptProjections) and the run loop's per-attempt continuation state gains a tool-result message before the next provider call in the same attempt/turn.",
   },
 ];
 
@@ -160,7 +223,7 @@ export const toolDataTypes: SeedDataType[] = [
     persistenceScope: "process",
     providerSpecific: false,
     purpose:
-      "Public descriptor contract for OpenClaw tool metadata: keeps ownership, execution, and availability metadata in one shared shape so descriptor producers and the descriptor cache agree.",
+      "Public descriptor contract for OpenClaw tool metadata: keeps ownership, execution, and availability metadata in one shared shape so descriptor producers and the descriptor cache agree. Distinct from AgentTool/AnyAgentTool (the runtime implementation contract) -- see dt:AgentTool.",
     fields: [
       {
         name: "name",
@@ -191,7 +254,8 @@ export const toolDataTypes: SeedDataType[] = [
         required: true,
         persisted: false,
         sensitive: false,
-        description: "JSON-Schema-shaped input schema.",
+        description:
+          "JSON-Schema-shaped input schema (plain object, not TypeBox -- see dt:AgentTool for the TypeBox-typed runtime contract).",
       },
       {
         name: "outputSchema",
@@ -240,6 +304,41 @@ export const toolDataTypes: SeedDataType[] = [
         required: false,
         persisted: false,
         sensitive: false,
+      },
+    ],
+  },
+  {
+    key: "dt:AgentTool",
+    symbolKey: "sym:AnyAgentTool.execute",
+    name: "AgentTool / AnyAgentTool",
+    category: "tool-call",
+    status: "confirmed",
+    persistenceScope: "process",
+    providerSpecific: false,
+    purpose:
+      "The runtime tool-implementation contract (distinct from ToolDescriptor). AgentTool<TParameters extends TSchema, TResult> parameterizes its arguments as a TypeBox schema; AnyAgentTool type-erases that generic into a uniform execute(toolCallId, params, signal?, onUpdate?) method every built-in tool implements.",
+    fields: [
+      {
+        name: "execute",
+        typeText: "(toolCallId, params, signal?, onUpdate?) => Promise<AgentToolResult<unknown>>",
+        required: true,
+        persisted: false,
+      },
+      { name: "displaySummary", typeText: "string | undefined", required: false, persisted: false },
+      {
+        name: "catalogMode",
+        typeText: '"direct-only" | undefined',
+        required: false,
+        persisted: false,
+        description:
+          "Keeps a tool model-visible when hidden catalog bridges cannot preserve its result contract.",
+      },
+      {
+        name: "requiredClientCaps",
+        typeText: "string[] | undefined",
+        required: false,
+        persisted: false,
+        description: "Gateway client capabilities required before this tool can be assembled.",
       },
     ],
   },
@@ -296,6 +395,43 @@ export const toolEvidence: SeedEvidence[] = [
     confidence: 1.0,
     notes: "Read directly in full.",
   },
+  {
+    key: "ev:run-tool-lifecycle",
+    fileKey: "src/agents/embedded-agent-subscribe.ts",
+    symbolKey: "sym:runToolLifecycle",
+    startLine: 1436,
+    endLine: 1476,
+    claim:
+      "runToolLifecycle wraps a tool execution with tool_execution_start / tool_execution_end lifecycle events, catching and normalizing errors before rethrowing.",
+    evidenceType: "implementation",
+    confidence: 1.0,
+    notes: "Read directly.",
+  },
+  {
+    key: "ev:tool-search-catalog-executor-calls-lifecycle",
+    fileKey: "src/agents/embedded-agent-runner/run/attempt-stream-prepare.ts",
+    symbolKey: "sym:toolSearchCatalogExecutor",
+    startLine: 292,
+    endLine: 330,
+    claim:
+      "toolSearchCatalogExecutor resolves a tool object and invokes subscription.runToolLifecycle with an execute closure that calls toolParams.tool.execute(toolCallId, input, signal, onUpdate).",
+    evidenceType: "call-site",
+    confidence: 0.9,
+    notes:
+      "Read directly. Confidence 0.9 rather than 1.0 because this confirms one call path (the 'tool search catalog' resolution path) rather than proving it is the only path every tool call takes.",
+  },
+  {
+    key: "ev:agent-tool-typebox-parameters",
+    fileKey: "src/agents/tools/common.ts",
+    symbolKey: "sym:AnyAgentTool.execute",
+    startLine: 1,
+    endLine: 69,
+    claim:
+      'AgentToolWithMeta<TParameters extends TSchema, TResult> and AnyAgentTool both type tool parameters via TypeBox (`import type { TSchema } from "typebox"`), matching the wire-level Tool.parameters type in packages/llm-core -- TypeBox is used consistently as the schema/validation library for tool arguments across both layers.',
+    evidenceType: "type-definition",
+    confidence: 1.0,
+    notes: "Read directly in full.",
+  },
 ];
 
 export const toolOpenQuestions: SeedOpenQuestion[] = [
@@ -304,29 +440,28 @@ export const toolOpenQuestions: SeedOpenQuestion[] = [
     question:
       "What is the exact function that dispatches a normalized provider tool-call event to a resolved ToolDescriptor's executor?",
     evidenceInspected:
-      "Searched src/agents for dispatchToolCall/executeToolCall/runTool/invokeTool export patterns; no match found with the patterns tried. src/agents/tools/agent-step.ts is a strong candidate by name but was not opened this pass.",
-    reasonUnresolved:
-      "Research budget was reallocated to the agent loop, provider architecture, and persistence schema after early subagent research failures (account spend limit); this symbol was not personally verified before the pivot to writing the catalog.",
+      "RESOLVED in a follow-up pass: runToolLifecycle (src/agents/embedded-agent-subscribe.ts:1436-1476) is the confirmed lifecycle-wrapping dispatcher, called from toolSearchCatalogExecutor (src/agents/embedded-agent-runner/run/attempt-stream-prepare.ts:292-330) with `execute: () => toolParams.tool.execute(toolCallId, input, signal, onUpdate)`. Both read directly.",
+    reasonUnresolved: "N/A -- resolved, with one residual nuance below.",
     likelyInterpretation:
-      "Likely src/agents/tools/agent-step.ts or a sibling file in src/agents/embedded-agent-runner/run/ (e.g. attempt-tool-construction-plan.ts, attempt-tool-catalog.ts, attempt-client-tools.ts -- all confirmed to exist by directory listing).",
+      "toolSearchCatalogExecutor's name ('tool search catalog') suggests OpenClaw may have more than one tool-resolution path (e.g. a smaller always-in-context tool set vs. a larger searchable catalog); whether every tool call funnels through this exact function or whether a second, simpler direct-dispatch path also exists was not fully ruled out.",
     verificationMethod:
-      "Read src/agents/tools/agent-step.ts and src/agents/embedded-agent-runner/run/attempt-tool-construction-plan.ts in full; grep for where the tool-call event's `name` field is looked up against the tool registry.",
-    priority: "high",
-    status: "open",
+      "grep -rn 'runToolLifecycle' src/agents to enumerate every call site and confirm whether toolSearchCatalogExecutor is the only one.",
+    priority: "medium",
+    status: "resolved",
   },
   {
     category: "tool-runtime",
     question:
       "Is a tool call's inputSchema validated with a specific library (zod, ajv, a custom JSON-Schema validator), and where?",
     evidenceInspected:
-      "ToolDescriptor.inputSchema is typed as JsonObject (a plain JSON-Schema-shaped object), not a zod schema, suggesting validation happens via a generic JSON-Schema validator rather than zod inference -- but this is inferred, not confirmed by reading a validator call site.",
-    reasonUnresolved: "Not traced this pass.",
+      'RESOLVED (library identified) in a follow-up pass: both the wire-level Tool.parameters (packages/llm-core/src/types.ts:376-380, validated by ValidateToolArgumentsFn at line 691) and the runtime AgentTool/AnyAgentTool contract (src/agents/tools/common.ts, `import type { TSchema } from "typebox"`) type tool arguments as TypeBox schemas, not zod or a bespoke JSON-Schema validator. ToolDescriptor.inputSchema (src/tools/types.ts) remains a plain JsonObject, so a descriptor-to-TypeBox bridge still exists somewhere (not located).',
+    reasonUnresolved:
+      "The exact call site invoking ValidateToolArgumentsFn against a live ToolCall, and the ToolDescriptor.inputSchema-to-TypeBox bridge, were not located this pass.",
     likelyInterpretation:
-      "A shared JSON-Schema validation helper somewhere under src/tools or src/plugin-sdk.",
-    verificationMethod:
-      "grep -rn 'inputSchema' src/agents src/tools src/plugin-sdk for the validation call site.",
-    priority: "medium",
-    status: "open",
+      "packages/llm-core/src/validation.ts (confirmed to exist, has its own validation.test.ts) almost certainly implements ValidateToolArgumentsFn.",
+    verificationMethod: "Read packages/llm-core/src/validation.ts in full.",
+    priority: "low",
+    status: "investigating",
   },
   {
     category: "tool-runtime",

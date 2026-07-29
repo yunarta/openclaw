@@ -50,6 +50,7 @@ import {
   seedTools,
   toolEvidence,
   toolOpenQuestions,
+  toolSymbols,
 } from "./tools.js";
 
 export function buildCatalogSeed(): CatalogSeed {
@@ -57,7 +58,7 @@ export function buildCatalogSeed(): CatalogSeed {
     repository,
     files,
     modules,
-    symbols: [...agentLoopSymbols, ...providerSymbols, ...oauthSymbols],
+    symbols: [...agentLoopSymbols, ...providerSymbols, ...oauthSymbols, ...toolSymbols],
     capabilities: [
       ...agentLoopCapabilities,
       ...providerCapabilities,

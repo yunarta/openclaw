@@ -14,9 +14,9 @@ or `SELECT * FROM unresolved_high_priority;` directly against `catalog.sqlite`.
 
 | Priority | Count |
 | --- | --- |
-| high | 9 |
+| high | 8 |
 | medium | 3 |
-| low | 0 |
+| low | 1 |
 
 ## [high] What is the exact SecretRef resolution mechanism (type definition and resolver function) described in root AGENTS.md, and where does it live?
 
@@ -81,15 +81,6 @@ or `SELECT * FROM unresolved_high_priority;` directly against `catalog.sqlite`.
 - **Likely interpretation:** Likely a hybrid: a short skill index/description is always in context (for model-selection), with the full SKILL.md body fetched on demand via a tool when the skill is actually invoked -- consistent with the 'Skill' tool pattern referenced in root AGENTS.md ('Skills own workflows').
 - **How to verify:** Read src/skills/loading/*.ts and src/skills/runtime/*.ts in full, and find the model-facing tool (if any) that reads a SKILL.md body on demand.
 
-## [high] What is the exact function that dispatches a normalized provider tool-call event to a resolved ToolDescriptor's executor?
-
-- **Category:** tool-runtime
-- **Status:** open
-- **Evidence inspected:** Searched src/agents for dispatchToolCall/executeToolCall/runTool/invokeTool export patterns; no match found with the patterns tried. src/agents/tools/agent-step.ts is a strong candidate by name but was not opened this pass.
-- **Why unresolved:** Research budget was reallocated to the agent loop, provider architecture, and persistence schema after early subagent research failures (account spend limit); this symbol was not personally verified before the pivot to writing the catalog.
-- **Likely interpretation:** Likely src/agents/tools/agent-step.ts or a sibling file in src/agents/embedded-agent-runner/run/ (e.g. attempt-tool-construction-plan.ts, attempt-tool-catalog.ts, attempt-client-tools.ts -- all confirmed to exist by directory listing).
-- **How to verify:** Read src/agents/tools/agent-step.ts and src/agents/embedded-agent-runner/run/attempt-tool-construction-plan.ts in full; grep for where the tool-call event's `name` field is looked up against the tool registry.
-
 ## [high] Is tool execution sandboxed (subprocess isolation, filesystem/network restriction), and if so, how?
 
 - **Category:** tool-runtime
@@ -117,12 +108,21 @@ or `SELECT * FROM unresolved_high_priority;` directly against `catalog.sqlite`.
 - **Likely interpretation:** Likely description-based: a compact per-skill description is included in the system prompt or a dedicated Skill tool's own description, and the model chooses by issuing a tool call naming the skill.
 - **How to verify:** Read src/skills/discovery/*.ts and search for where skill descriptions are assembled into a prompt or tool schema.
 
-## [medium] Is a tool call's inputSchema validated with a specific library (zod, ajv, a custom JSON-Schema validator), and where?
+## [medium] What is the exact function that dispatches a normalized provider tool-call event to a resolved ToolDescriptor's executor?
 
 - **Category:** tool-runtime
-- **Status:** open
-- **Evidence inspected:** ToolDescriptor.inputSchema is typed as JsonObject (a plain JSON-Schema-shaped object), not a zod schema, suggesting validation happens via a generic JSON-Schema validator rather than zod inference -- but this is inferred, not confirmed by reading a validator call site.
-- **Why unresolved:** Not traced this pass.
-- **Likely interpretation:** A shared JSON-Schema validation helper somewhere under src/tools or src/plugin-sdk.
-- **How to verify:** grep -rn 'inputSchema' src/agents src/tools src/plugin-sdk for the validation call site.
+- **Status:** resolved
+- **Evidence inspected:** RESOLVED in a follow-up pass: runToolLifecycle (src/agents/embedded-agent-subscribe.ts:1436-1476) is the confirmed lifecycle-wrapping dispatcher, called from toolSearchCatalogExecutor (src/agents/embedded-agent-runner/run/attempt-stream-prepare.ts:292-330) with `execute: () => toolParams.tool.execute(toolCallId, input, signal, onUpdate)`. Both read directly.
+- **Why unresolved:** N/A -- resolved, with one residual nuance below.
+- **Likely interpretation:** toolSearchCatalogExecutor's name ('tool search catalog') suggests OpenClaw may have more than one tool-resolution path (e.g. a smaller always-in-context tool set vs. a larger searchable catalog); whether every tool call funnels through this exact function or whether a second, simpler direct-dispatch path also exists was not fully ruled out.
+- **How to verify:** grep -rn 'runToolLifecycle' src/agents to enumerate every call site and confirm whether toolSearchCatalogExecutor is the only one.
+
+## [low] Is a tool call's inputSchema validated with a specific library (zod, ajv, a custom JSON-Schema validator), and where?
+
+- **Category:** tool-runtime
+- **Status:** investigating
+- **Evidence inspected:** RESOLVED (library identified) in a follow-up pass: both the wire-level Tool.parameters (packages/llm-core/src/types.ts:376-380, validated by ValidateToolArgumentsFn at line 691) and the runtime AgentTool/AnyAgentTool contract (src/agents/tools/common.ts, `import type { TSchema } from "typebox"`) type tool arguments as TypeBox schemas, not zod or a bespoke JSON-Schema validator. ToolDescriptor.inputSchema (src/tools/types.ts) remains a plain JsonObject, so a descriptor-to-TypeBox bridge still exists somewhere (not located).
+- **Why unresolved:** The exact call site invoking ValidateToolArgumentsFn against a live ToolCall, and the ToolDescriptor.inputSchema-to-TypeBox bridge, were not located this pass.
+- **Likely interpretation:** packages/llm-core/src/validation.ts (confirmed to exist, has its own validation.test.ts) almost certainly implements ValidateToolArgumentsFn.
+- **How to verify:** Read packages/llm-core/src/validation.ts in full.
 

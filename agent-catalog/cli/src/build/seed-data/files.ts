@@ -520,9 +520,44 @@ export const files: SeedFile[] = [
   {
     path: "src/agents/tools/agent-step.ts",
     category: "tool-runtime",
+    importance: "medium",
+    purpose:
+      "Read in full this pass (160 lines). NOT the tool-call dispatcher (corrected from an earlier guess). Exports runAgentStep, the executor behind the sessions-send-style inter-session-messaging tool: annotates an inter-session prompt, sends it to a target session via either the in-process agentCommandFromIngress command path or a Gateway 'agent' RPC call, then waits for and returns the resulting assistant reply text.",
+  },
+  {
+    path: "src/agents/embedded-agent-subscribe.ts",
+    category: "tool-runtime",
+    importance: "critical",
+    purpose:
+      "Exports runToolLifecycle (read directly, lines 1436-1476): wraps a tool execution with tool_execution_start / tool_execution_end lifecycle events (success or error) around an injected `execute()` closure -- the tool-call dispatch lifecycle wrapper. Also builds the large subscribeEmbeddedAgentSession() handler object consumed by the run loop (only this one exported function read in full; the rest of this large file was not read line-by-line).",
+  },
+  {
+    path: "src/agents/embedded-agent-runner/run/attempt-stream-prepare.ts",
+    category: "tool-runtime",
     importance: "high",
     purpose:
-      "Confirmed to exist under src/agents/tools; name suggests a single agent tool-execution step (file not read line-by-line this pass).",
+      "Confirmed call site (read lines 200-330): builds toolSearchCatalogExecutor, which calls subscription.runToolLifecycle({ ..., execute: () => toolParams.tool.execute(toolCallId, input, signal, onUpdate) }) -- i.e. this is where a resolved tool (AnyAgentTool) is actually invoked through the lifecycle wrapper. Named for the 'tool search catalog' path specifically; whether this is the single universal tool-dispatch path or one of several was not fully confirmed this pass.",
+  },
+  {
+    path: "src/agents/tools/common.ts",
+    category: "tool-runtime",
+    importance: "critical",
+    purpose:
+      "Read lines 1-70 this pass. Defines AgentToolWithMeta and AnyAgentTool (type-erased AgentTool with `execute(toolCallId, params, signal?, onUpdate?): Promise<AgentToolResult<unknown>>`), plus jsonResult/textResult re-exports. AgentTool itself is imported from ../runtime/index.js.",
+  },
+  {
+    path: "src/agents/runtime/index.ts",
+    category: "tool-runtime",
+    importance: "high",
+    purpose:
+      "Confirmed to exist (55 lines); defines the base AgentTool/AgentToolProgress/AgentToolResult/AgentToolUpdateCallback types that src/agents/tools/common.ts's AnyAgentTool erases. Not read line-by-line this pass.",
+  },
+  {
+    path: "src/agents/runtime/proxy.ts",
+    category: "streaming",
+    importance: "medium",
+    purpose:
+      "Read lines 1-55 this pass. 'Proxy stream function for apps that route LLM calls through a server': re-serializes AssistantMessageEvent as a bandwidth-reduced ProxyAssistantMessageEvent (partial field stripped) for a client app talking to a server that manages auth and proxies to LLM providers. Exports streamProxy(). Relevant to the gateway-protocol open question but not the same package as packages/gateway-protocol.",
   },
   {
     path: "src/agents/tools/ask-user-tool.ts",
