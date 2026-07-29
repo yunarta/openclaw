@@ -529,7 +529,7 @@ export const files: SeedFile[] = [
     category: "tool-runtime",
     importance: "critical",
     purpose:
-      "Exports runToolLifecycle (read directly, lines 1436-1476): wraps a tool execution with tool_execution_start / tool_execution_end lifecycle events (success or error) around an injected `execute()` closure -- the tool-call dispatch lifecycle wrapper. Also builds the large subscribeEmbeddedAgentSession() handler object consumed by the run loop (only this one exported function read in full; the rest of this large file was not read line-by-line).",
+      'Exports runToolLifecycle (read directly, lines 1436-1476): wraps a tool execution with tool_execution_start / tool_execution_end lifecycle events (success or error) around an injected `execute()` closure -- the tool-call dispatch lifecycle wrapper. Also builds the large subscribeEmbeddedAgentSession() handler object consumed by the run loop (only this one exported function read in full; the rest of this large file was not read line-by-line). emitAssistantStreamDataSafely (read directly, lines 279-304) is the concrete bridge point where a normalized AssistantMessageEvent-derived `data` object crosses into src/infra/agent-events.ts\'s internal bus via emitAgentEvent({ runId, stream: "assistant", data }).',
   },
   {
     path: "src/agents/embedded-agent-runner/run/attempt-stream-prepare.ts",

@@ -9,12 +9,14 @@ Full guidance lives in `../EXTRACTION-GUIDE.md`; this report is the database-der
 - `(Anthropic transport stream reader)` (function, critical importance, low coupling) -- packages/ai/src/transports/anthropic-transport-stream.ts
 - `(OpenAI reasoning-effort mapper)` (function, critical importance, low coupling) -- packages/ai/src/providers/openai-reasoning-effort.ts
 - `(OpenAI/ChatGPT OAuth module)` (constant, critical importance, low coupling) -- src/llm/utils/oauth/openai-chatgpt.ts
+- `AgentEventSchema` (type, critical importance, low coupling) -- packages/gateway-protocol/src/schema/agent.ts
 - `AgentHarness` (interface, critical importance, low coupling) -- src/agents/harness/types.ts
 - `AssistantMessageEvent` (type, critical importance, low coupling) -- packages/llm-core/src/types.ts
 - `ThinkingContent` (interface, critical importance, low coupling) -- packages/llm-core/src/types.ts
 - `createAssistantMessageEventStream` (factory, critical importance, low coupling) -- packages/ai/src/utils/event-stream.ts
 - `defaultApiRegistry` (constant, critical importance, low coupling) -- packages/ai/src/internal/runtime.ts
 - `defaultLlmRuntime` (constant, critical importance, low coupling) -- packages/ai/src/internal/runtime.ts
+- `emitAgentEvent` (function, critical importance, low coupling) -- src/infra/agent-events.ts
 - `formatSkillsForPrompt` (function, critical importance, low coupling) -- src/skills/loading/skill-contract.ts
 - `isToolAllowed` (function, critical importance, low coupling) -- src/agents/sandbox/tool-policy.ts
 - `registerAgentHarness` (function, critical importance, low coupling) -- src/agents/harness/registry.ts

@@ -12,6 +12,17 @@ import { extraCapabilities, extraFindings, extraOpenQuestions } from "./capabili
 import { eventDataTypes, seedEvents } from "./events.js";
 import { files } from "./files.js";
 import {
+  gatewayProtocolFiles,
+  gatewayProtocolModules,
+  gatewayProtocolSymbols,
+  gatewayProtocolCapabilities,
+  gatewayProtocolDataTypes,
+  gatewayProtocolRelationships,
+  gatewayProtocolEvidence,
+  gatewayProtocolFindings,
+  gatewayProtocolOpenQuestions,
+} from "./gateway-protocol.js";
+import {
   persistenceEntities,
   memorySystems,
   memoryCapabilities,
@@ -75,8 +86,8 @@ import {
 export function buildCatalogSeed(): CatalogSeed {
   return {
     repository,
-    files: [...files, ...sandboxFiles],
-    modules: [...modules, ...sandboxModules],
+    files: [...files, ...sandboxFiles, ...gatewayProtocolFiles],
+    modules: [...modules, ...sandboxModules, ...gatewayProtocolModules],
     symbols: [
       ...agentLoopSymbols,
       ...providerSymbols,
@@ -84,6 +95,7 @@ export function buildCatalogSeed(): CatalogSeed {
       ...toolSymbols,
       ...sandboxSymbols,
       ...skillSymbols,
+      ...gatewayProtocolSymbols,
     ],
     capabilities: [
       ...agentLoopCapabilities,
@@ -92,6 +104,7 @@ export function buildCatalogSeed(): CatalogSeed {
       ...toolCapabilities,
       ...memoryCapabilities,
       ...extraCapabilities,
+      ...gatewayProtocolCapabilities,
     ],
     evidence: [
       ...agentLoopEvidence,
@@ -101,8 +114,13 @@ export function buildCatalogSeed(): CatalogSeed {
       ...skillEvidence,
       ...memorySessionEvidence,
       ...sandboxEvidence,
+      ...gatewayProtocolEvidence,
     ],
-    relationships: [...agentLoopRelationships, ...providerRelationships],
+    relationships: [
+      ...agentLoopRelationships,
+      ...providerRelationships,
+      ...gatewayProtocolRelationships,
+    ],
     flows: [
       ...agentLoopFlows,
       ...providerFlows,
@@ -126,6 +144,7 @@ export function buildCatalogSeed(): CatalogSeed {
       ...eventDataTypes,
       ...sandboxDataTypes,
       ...oauthDataTypes,
+      ...gatewayProtocolDataTypes,
     ],
     events: seedEvents,
     tools: seedTools,
@@ -133,7 +152,13 @@ export function buildCatalogSeed(): CatalogSeed {
     memorySystems,
     persistenceEntities,
     snippets: [...agentLoopSnippets, ...providerSnippets],
-    findings: [...providerFindings, ...extraFindings, ...sandboxFindings, ...skillFindings],
+    findings: [
+      ...providerFindings,
+      ...extraFindings,
+      ...sandboxFindings,
+      ...skillFindings,
+      ...gatewayProtocolFindings,
+    ],
     openQuestions: [
       ...oauthOpenQuestions,
       ...toolOpenQuestions,
@@ -141,6 +166,7 @@ export function buildCatalogSeed(): CatalogSeed {
       ...memorySessionOpenQuestions,
       ...extraOpenQuestions,
       ...sandboxOpenQuestions,
+      ...gatewayProtocolOpenQuestions,
     ],
   };
 }

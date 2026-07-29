@@ -6,15 +6,15 @@ Generated from `catalog.sqlite`. Do not hand-edit; run `npm run generate-reports
 
 | Table | Rows |
 | --- | --- |
-| files | 230 |
-| symbols | 55 |
-| modules | 15 |
-| capabilities | 30 |
+| files | 235 |
+| symbols | 57 |
+| modules | 16 |
+| capabilities | 31 |
 | flows | 12 |
 | flow_steps | 39 |
 | snippets | 5 |
-| evidence | 30 |
-| findings | 9 |
+| evidence | 34 |
+| findings | 10 |
 | open_questions | 12 |
 
 ## The two-layer runtime shape

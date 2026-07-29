@@ -165,14 +165,11 @@ export const extraOpenQuestions: SeedOpenQuestion[] = [
     question:
       "What does packages/gateway-protocol/ define, and how does it relate to the AssistantMessageEventStreamContract event model?",
     evidenceInspected:
-      "Not opened this pass at all -- packages/gateway-protocol was named in the task brief as a scoped guide location but was not investigated during this research pass.",
-    reasonUnresolved:
-      "Time/resource constraint after the subagent failures; this was assigned to the 'events, streaming, gateway protocol' research thread which did not complete.",
-    likelyInterpretation:
-      "Likely a client<->gateway RPC/message envelope schema (WebSocket or SSE transport) that wraps or references the same underlying agent-run events for delivery to external clients (channels, control UI).",
-    verificationMethod:
-      "Read packages/gateway-protocol/package.json and its src/index.ts or equivalent entry file.",
+      'RESOLVED in a follow-up pass: read packages/gateway-protocol/README.md and src/schema/agent.ts (398 lines) in full, plus src/infra/agent-events.ts (745 lines) in full. gateway-protocol is a standalone TypeBox schema/validator package for the Gateway WebSocket wire protocol (version 4). Its AgentEventSchema is a generic stream-event envelope (runId/seq/stream/ts/data) with `data` deliberately left as Type.Unknown() -- by explicit README design, ~60 fields including every event `data` payload are intentionally open passthroughs. src/infra/agent-events.ts independently defines the internal AgentEventPayload producer (emitAgentEvent), structurally matching but not type-linked to gateway-protocol. The embedded runner\'s emitAssistantStreamDataSafely (src/agents/embedded-agent-subscribe.ts:279-304) is the exact bridge point where a normalized AssistantMessageEvent becomes an emitAgentEvent({ stream: "assistant", data }) call. See the gateway-wire-protocol module/finding for the full three-layer picture.',
+    reasonUnresolved: "N/A -- resolved.",
+    likelyInterpretation: "N/A -- resolved with direct evidence.",
+    verificationMethod: "N/A -- resolved.",
     priority: "high",
-    status: "open",
+    status: "resolved",
   },
 ];

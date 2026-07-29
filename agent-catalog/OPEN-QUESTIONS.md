@@ -30,11 +30,11 @@ or `SELECT * FROM unresolved_high_priority;` directly against `catalog.sqlite`.
 ## [high] What does packages/gateway-protocol/ define, and how does it relate to the AssistantMessageEventStreamContract event model?
 
 - **Category:** gateway-protocol
-- **Status:** open
-- **Evidence inspected:** Not opened this pass at all -- packages/gateway-protocol was named in the task brief as a scoped guide location but was not investigated during this research pass.
-- **Why unresolved:** Time/resource constraint after the subagent failures; this was assigned to the 'events, streaming, gateway protocol' research thread which did not complete.
-- **Likely interpretation:** Likely a client<->gateway RPC/message envelope schema (WebSocket or SSE transport) that wraps or references the same underlying agent-run events for delivery to external clients (channels, control UI).
-- **How to verify:** Read packages/gateway-protocol/package.json and its src/index.ts or equivalent entry file.
+- **Status:** resolved
+- **Evidence inspected:** RESOLVED in a follow-up pass: read packages/gateway-protocol/README.md and src/schema/agent.ts (398 lines) in full, plus src/infra/agent-events.ts (745 lines) in full. gateway-protocol is a standalone TypeBox schema/validator package for the Gateway WebSocket wire protocol (version 4). Its AgentEventSchema is a generic stream-event envelope (runId/seq/stream/ts/data) with `data` deliberately left as Type.Unknown() -- by explicit README design, ~60 fields including every event `data` payload are intentionally open passthroughs. src/infra/agent-events.ts independently defines the internal AgentEventPayload producer (emitAgentEvent), structurally matching but not type-linked to gateway-protocol. The embedded runner's emitAssistantStreamDataSafely (src/agents/embedded-agent-subscribe.ts:279-304) is the exact bridge point where a normalized AssistantMessageEvent becomes an emitAgentEvent({ stream: "assistant", data }) call. See the gateway-wire-protocol module/finding for the full three-layer picture.
+- **Why unresolved:** N/A -- resolved.
+- **Likely interpretation:** N/A -- resolved with direct evidence.
+- **How to verify:** N/A -- resolved.
 
 ## [high] Does a scheduled cron job execute through the same runEmbeddedAgent entry point as an interactive run, or a separate execution path?
 
