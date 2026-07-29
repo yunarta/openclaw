@@ -83,11 +83,19 @@ export function runRelated(ctx: CommandContext): void {
     .all(symbol.id) as unknown as Array<{ name: string }>;
 
   const outgoingNamed = outgoing.map((r) => ({
-    ...r,
+    relationship_type: r.relationship_type,
+    description: r.description,
+    status: r.status,
+    other_type: r.other_type,
+    other_id: r.other_id,
     other_name: resolveName(r.other_type, r.other_id),
   }));
   const incomingNamed = incoming.map((r) => ({
-    ...r,
+    relationship_type: r.relationship_type,
+    description: r.description,
+    status: r.status,
+    other_type: r.other_type,
+    other_id: r.other_id,
     other_name: resolveName(r.other_type, r.other_id),
   }));
 
@@ -107,22 +115,22 @@ export function runRelated(ctx: CommandContext): void {
   if (outgoingNamed.length > 0) {
     console.log("\nOutgoing:");
     for (const r of outgoingNamed)
-      console.log(
+      {console.log(
         `- --[${r.relationship_type}]--> ${r.other_type}:${r.other_name}${r.description ? `  (${r.description})` : ""}`,
-      );
+      );}
   }
   if (incomingNamed.length > 0) {
     console.log("\nIncoming:");
     for (const r of incomingNamed)
-      console.log(`- ${r.other_type}:${r.other_name} --[${r.relationship_type}]-->`);
+      {console.log(`- ${r.other_type}:${r.other_name} --[${r.relationship_type}]-->`);}
   }
   if (capabilities.length > 0) {
     console.log("\nCapabilities:");
-    for (const c of capabilities) console.log(`- ${c.name}`);
+    for (const c of capabilities) {console.log(`- ${c.name}`);}
   }
   if (flowSteps.length > 0) {
     console.log("\nFlows:");
-    for (const f of flowSteps) console.log(`- ${f.name}`);
+    for (const f of flowSteps) {console.log(`- ${f.name}`);}
   }
   if (
     outgoingNamed.length === 0 &&

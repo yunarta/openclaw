@@ -72,7 +72,23 @@ export function runSymbol(ctx: CommandContext): void {
 
   const results = rows.map((row) => {
     const capabilities = capStmt.all(row.id) as unknown as CapabilityRow[];
-    return { ...row, capabilities };
+    return {
+      id: row.id,
+      name: row.name,
+      qualified_name: row.qualified_name,
+      kind: row.kind,
+      signature: row.signature,
+      start_line: row.start_line,
+      end_line: row.end_line,
+      purpose: row.purpose,
+      architectural_role: row.architectural_role,
+      importance: row.importance,
+      status: row.status,
+      reusable: row.reusable,
+      application_coupling: row.application_coupling,
+      path: row.path,
+      capabilities,
+    };
   });
 
   if (flags.json) {
@@ -89,15 +105,15 @@ export function runSymbol(ctx: CommandContext): void {
       `Kind: ${row.kind}    Status: ${row.status}    Importance: ${row.importance ?? "unset"}`,
     );
     console.log(`Location: ${location}`);
-    if (row.signature) console.log(`Signature: ${row.signature}`);
-    if (row.purpose) console.log(`Purpose: ${row.purpose}`);
-    if (row.architectural_role) console.log(`Role: ${row.architectural_role}`);
+    if (row.signature) {console.log(`Signature: ${row.signature}`);}
+    if (row.purpose) {console.log(`Purpose: ${row.purpose}`);}
+    if (row.architectural_role) {console.log(`Role: ${row.architectural_role}`);}
     console.log(
       `Reusable: ${row.reusable === null ? "unknown" : row.reusable ? "yes" : "no"}    Coupling: ${row.application_coupling ?? "unknown"}`,
     );
     if (row.capabilities.length > 0) {
       console.log("Capabilities:");
-      for (const cap of row.capabilities) console.log(`  - ${cap.capability_name} (${cap.role})`);
+      for (const cap of row.capabilities) {console.log(`  - ${cap.capability_name} (${cap.role})`);}
     }
     console.log("");
   }

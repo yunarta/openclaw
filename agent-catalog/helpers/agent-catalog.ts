@@ -146,7 +146,7 @@ class SqliteAgentCatalog implements AgentCatalog {
       .filter(Boolean)
       .map((term) => `"${term.replace(/"/g, '""')}"`)
       .join(" OR ");
-    if (!matchQuery) return [];
+    if (!matchQuery) {return [];}
 
     let sql = `SELECT entity_type, entity_id, title, body, source_path
                FROM catalog_search WHERE catalog_search MATCH ?`;
@@ -235,7 +235,7 @@ class SqliteAgentCatalog implements AgentCatalog {
           implementation_summary: string | null;
         }
       | undefined;
-    if (!head) return null;
+    if (!head) {return null;}
 
     const symbolRows = this.db
       .prepare(
@@ -279,7 +279,7 @@ class SqliteAgentCatalog implements AgentCatalog {
         `SELECT name FROM flows WHERE name = ? OR name LIKE ? ORDER BY (name = ?) DESC LIMIT 1`,
       )
       .get(name, `%${name}%`, name) as { name: string } | undefined;
-    if (!nameRow) return null;
+    if (!nameRow) {return null;}
 
     const rows = this.db
       .prepare(`SELECT * FROM flow_map WHERE flow_name = ? ORDER BY step_order`)
@@ -300,7 +300,7 @@ class SqliteAgentCatalog implements AgentCatalog {
       alternate_path: string | null;
     }>;
     const [head] = rows;
-    if (!head) return null;
+    if (!head) {return null;}
 
     return {
       id: head.flow_id,
@@ -331,7 +331,7 @@ class SqliteAgentCatalog implements AgentCatalog {
         `SELECT id FROM symbols WHERE name = ? OR name LIKE ? ORDER BY (name = ?) DESC LIMIT 1`,
       )
       .get(symbol, `%${symbol}%`, symbol) as { id: number } | undefined;
-    if (!symbolRow) return [];
+    if (!symbolRow) {return [];}
 
     const resolveName = (type: string, id: number): string => {
       if (type === "symbol") {

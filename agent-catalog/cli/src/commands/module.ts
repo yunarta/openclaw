@@ -59,13 +59,13 @@ export function runModule(ctx: CommandContext): void {
 
   console.log(`Module: ${mod.name}`);
   console.log(`Root: ${mod.root_path}    Category: ${mod.category}    Status: ${mod.status}`);
-  if (mod.purpose) console.log(`\nPurpose: ${mod.purpose}`);
-  if (mod.responsibilities) console.log(`Responsibilities: ${mod.responsibilities}`);
-  if (mod.non_responsibilities) console.log(`Non-responsibilities: ${mod.non_responsibilities}`);
-  if (mod.public_surface) console.log(`Public surface: ${mod.public_surface}`);
-  if (mod.runtime_behavior) console.log(`Runtime behavior: ${mod.runtime_behavior}`);
-  if (mod.extraction_relevance) console.log(`Extraction relevance: ${mod.extraction_relevance}`);
-  if (mod.extraction_difficulty) console.log(`Extraction difficulty: ${mod.extraction_difficulty}`);
+  if (mod.purpose) {console.log(`\nPurpose: ${mod.purpose}`);}
+  if (mod.responsibilities) {console.log(`Responsibilities: ${mod.responsibilities}`);}
+  if (mod.non_responsibilities) {console.log(`Non-responsibilities: ${mod.non_responsibilities}`);}
+  if (mod.public_surface) {console.log(`Public surface: ${mod.public_surface}`);}
+  if (mod.runtime_behavior) {console.log(`Runtime behavior: ${mod.runtime_behavior}`);}
+  if (mod.extraction_relevance) {console.log(`Extraction relevance: ${mod.extraction_relevance}`);}
+  if (mod.extraction_difficulty) {console.log(`Extraction difficulty: ${mod.extraction_difficulty}`);}
   console.log(`\nFiles (${files.length}):`);
   for (const f of files) {
     console.log(`  - ${f.path}${f.role ? ` [${f.role}]` : ""}`);

@@ -49,8 +49,8 @@ export function runSearch(ctx: CommandContext): void {
   }
   for (const row of rows) {
     console.log(`[${row.entity_type}] ${row.title}`);
-    if (row.source_path) console.log(`  ${row.source_path}`);
-    if (row.body) console.log(`  ${truncate(row.body.replace(/\s+/g, " ").trim())}`);
+    if (row.source_path) {console.log(`  ${row.source_path}`);}
+    if (row.body) {console.log(`  ${truncate(row.body.replace(/\s+/g, " ").trim())}`);}
     console.log("");
   }
 }

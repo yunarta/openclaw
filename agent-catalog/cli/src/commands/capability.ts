@@ -89,9 +89,9 @@ export function runCapability(ctx: CommandContext): void {
     for (const ep of entryPoints) {
       console.log(`- ${ep.symbol_name}`);
       if (ep.file_path)
-        console.log(
+        {console.log(
           `  ${ep.file_path}${ep.start_line ? `:${ep.start_line}${ep.end_line ? `-${ep.end_line}` : ""}` : ""}`,
-        );
+        );}
     }
   }
 
@@ -105,6 +105,6 @@ export function runCapability(ctx: CommandContext): void {
 
   if (snippets.length > 0) {
     console.log("\nRelevant snippets:");
-    for (const sn of snippets) console.log(`- snippet:${sn.id} ${sn.title}`);
+    for (const sn of snippets) {console.log(`- snippet:${sn.id} ${sn.title}`);}
   }
 }

@@ -59,7 +59,7 @@ export function runSnippet(ctx: CommandContext): void {
     console.log("---");
     console.log(row.explanation);
     if (row.architectural_significance)
-      console.log(`Significance: ${row.architectural_significance}`);
+      {console.log(`Significance: ${row.architectural_significance}`);}
     console.log("");
   }
 }

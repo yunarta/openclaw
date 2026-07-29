@@ -54,12 +54,12 @@ export function runFlow(ctx: CommandContext): void {
   const [head] = rows;
   console.log(`Flow: ${head.flow_name}`);
   console.log(`Category: ${head.flow_category}    Status: ${head.flow_status}`);
-  if (head.termination_condition) console.log(`Termination: ${head.termination_condition}`);
-  if (head.error_behavior) console.log(`Error behavior: ${head.error_behavior}`);
+  if (head.termination_condition) {console.log(`Termination: ${head.termination_condition}`);}
+  if (head.error_behavior) {console.log(`Error behavior: ${head.error_behavior}`);}
   console.log("");
   console.log("Steps:");
   for (const row of rows) {
-    if (row.step_order === null) continue;
+    if (row.step_order === null) {continue;}
     const loc = row.file_path
       ? row.start_line
         ? `${row.file_path}:${row.start_line}${row.end_line ? `-${row.end_line}` : ""}`
@@ -67,7 +67,7 @@ export function runFlow(ctx: CommandContext): void {
       : null;
     console.log(`${row.step_order}. ${row.step_title}`);
     console.log(`   ${row.step_description}`);
-    if (loc) console.log(`   ${row.symbol_name ? `${row.symbol_name} ` : ""}${loc}`);
-    if (row.alternate_path) console.log(`   Alternate: ${row.alternate_path}`);
+    if (loc) {console.log(`   ${row.symbol_name ? `${row.symbol_name} ` : ""}${loc}`);}
+    if (row.alternate_path) {console.log(`   Alternate: ${row.alternate_path}`);}
   }
 }
