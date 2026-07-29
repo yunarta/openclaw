@@ -1,5 +1,5 @@
-import type { DatabaseSync } from "node:sqlite";
 import { createHash } from "node:crypto";
+import type { DatabaseSync } from "node:sqlite";
 import type {
   CatalogSeed,
   SeedRepository,
@@ -22,7 +22,8 @@ import type {
   SeedOpenQuestion,
 } from "./seed-types.js";
 
-const bool = (v: boolean | null | undefined): number | null => (v === null || v === undefined ? null : v ? 1 : 0);
+const bool = (v: boolean | null | undefined): number | null =>
+  v === null || v === undefined ? null : v ? 1 : 0;
 
 /** Resolves polymorphic (type, key) references used by the relationships table. */
 export class KeyRegistry {
@@ -59,11 +60,23 @@ export function insertRepository(db: DatabaseSync, repo: SeedRepository): number
     `INSERT INTO repositories (name, root_path, git_commit, git_branch, analyzed_at, catalog_version)
      VALUES (?, ?, ?, ?, ?, ?)`,
   );
-  const info = stmt.run(repo.name, repo.rootPath, repo.gitCommit, repo.gitBranch, repo.analyzedAt, repo.catalogVersion);
+  const info = stmt.run(
+    repo.name,
+    repo.rootPath,
+    repo.gitCommit,
+    repo.gitBranch,
+    repo.analyzedAt,
+    repo.catalogVersion,
+  );
   return Number(info.lastInsertRowid);
 }
 
-export function insertFiles(db: DatabaseSync, repositoryId: number, files: SeedFile[], reg: KeyRegistry): void {
+export function insertFiles(
+  db: DatabaseSync,
+  repositoryId: number,
+  files: SeedFile[],
+  reg: KeyRegistry,
+): void {
   const stmt = db.prepare(
     `INSERT INTO files (repository_id, path, language, category, purpose, importance, in_scope, generated, test_file, source_hash)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -116,7 +129,9 @@ export function insertModules(db: DatabaseSync, modules: SeedModule[], reg: KeyR
     `INSERT INTO modules (name, root_path, category, purpose, responsibilities, non_responsibilities, public_surface, runtime_behavior, extraction_relevance, extraction_difficulty, status)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   );
-  const linkStmt = db.prepare(`INSERT INTO module_files (module_id, file_id, role) VALUES (?, ?, ?)`);
+  const linkStmt = db.prepare(
+    `INSERT INTO module_files (module_id, file_id, role) VALUES (?, ?, ?)`,
+  );
   for (const m of modules) {
     const info = stmt.run(
       m.name,
@@ -139,7 +154,11 @@ export function insertModules(db: DatabaseSync, modules: SeedModule[], reg: KeyR
   }
 }
 
-export function insertCapabilities(db: DatabaseSync, capabilities: SeedCapability[], reg: KeyRegistry): void {
+export function insertCapabilities(
+  db: DatabaseSync,
+  capabilities: SeedCapability[],
+  reg: KeyRegistry,
+): void {
   const stmt = db.prepare(
     `INSERT INTO capabilities (name, category, description, implementation_summary, reusable, maturity, status)
      VALUES (?, ?, ?, ?, ?, ?, ?)`,
@@ -148,11 +167,24 @@ export function insertCapabilities(db: DatabaseSync, capabilities: SeedCapabilit
     `INSERT INTO capability_symbols (capability_id, symbol_id, role, sequence_order) VALUES (?, ?, ?, ?)`,
   );
   for (const c of capabilities) {
-    const info = stmt.run(c.name, c.category, c.description ?? null, c.implementationSummary ?? null, bool(c.reusable), c.maturity ?? null, c.status);
+    const info = stmt.run(
+      c.name,
+      c.category,
+      c.description ?? null,
+      c.implementationSummary ?? null,
+      bool(c.reusable),
+      c.maturity ?? null,
+      c.status,
+    );
     const capabilityId = Number(info.lastInsertRowid);
     reg.register("capability", c.name, capabilityId);
     for (const link of c.symbols ?? []) {
-      linkStmt.run(capabilityId, reg.resolve("symbol", link.symbolKey), link.role, link.sequenceOrder ?? null);
+      linkStmt.run(
+        capabilityId,
+        reg.resolve("symbol", link.symbolKey),
+        link.role,
+        link.sequenceOrder ?? null,
+      );
     }
   }
 }
@@ -177,7 +209,11 @@ export function insertEvidence(db: DatabaseSync, evidence: SeedEvidence[], reg: 
   }
 }
 
-export function insertRelationships(db: DatabaseSync, relationships: SeedRelationship[], reg: KeyRegistry): void {
+export function insertRelationships(
+  db: DatabaseSync,
+  relationships: SeedRelationship[],
+  reg: KeyRegistry,
+): void {
   const stmt = db.prepare(
     `INSERT INTO relationships (from_type, from_id, relationship_type, to_type, to_id, description, status, evidence_id)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -236,7 +272,11 @@ export function insertFlowSteps(db: DatabaseSync, steps: SeedFlowStep[], reg: Ke
   }
 }
 
-export function insertDataTypes(db: DatabaseSync, dataTypes: SeedDataType[], reg: KeyRegistry): void {
+export function insertDataTypes(
+  db: DatabaseSync,
+  dataTypes: SeedDataType[],
+  reg: KeyRegistry,
+): void {
   const stmt = db.prepare(
     `INSERT INTO data_types (symbol_id, name, category, purpose, persistence_scope, provider_specific, status)
      VALUES (?, ?, ?, ?, ?, ?, ?)`,
@@ -277,10 +317,21 @@ export function insertEvents(db: DatabaseSync, events: SeedEvent[], reg: KeyRegi
     `INSERT INTO events (name, category, description, payload_type_id, persisted, status)
      VALUES (?, ?, ?, ?, ?, ?)`,
   );
-  const producerStmt = db.prepare(`INSERT INTO event_producers (event_id, symbol_id) VALUES (?, ?)`);
-  const consumerStmt = db.prepare(`INSERT INTO event_consumers (event_id, symbol_id) VALUES (?, ?)`);
+  const producerStmt = db.prepare(
+    `INSERT INTO event_producers (event_id, symbol_id) VALUES (?, ?)`,
+  );
+  const consumerStmt = db.prepare(
+    `INSERT INTO event_consumers (event_id, symbol_id) VALUES (?, ?)`,
+  );
   for (const e of events) {
-    const info = stmt.run(e.name, e.category, e.description ?? null, reg.tryResolve("data_type", e.payloadTypeKey), bool(e.persisted), e.status);
+    const info = stmt.run(
+      e.name,
+      e.category,
+      e.description ?? null,
+      reg.tryResolve("data_type", e.payloadTypeKey),
+      bool(e.persisted),
+      e.status,
+    );
     const eventId = Number(info.lastInsertRowid);
     reg.register("event", e.key, eventId);
     for (const symbolKey of e.producerSymbolKeys ?? []) {
@@ -339,7 +390,11 @@ export function insertSkills(db: DatabaseSync, skills: SeedSkill[], reg: KeyRegi
   }
 }
 
-export function insertMemorySystems(db: DatabaseSync, items: SeedMemorySystem[], reg: KeyRegistry): void {
+export function insertMemorySystems(
+  db: DatabaseSync,
+  items: SeedMemorySystem[],
+  reg: KeyRegistry,
+): void {
   const stmt = db.prepare(
     `INSERT INTO memory_systems (name, category, storage_backend, write_path, retrieval_path, ranking_method, prompt_injection, retention_policy, status)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -360,7 +415,11 @@ export function insertMemorySystems(db: DatabaseSync, items: SeedMemorySystem[],
   }
 }
 
-export function insertPersistenceEntities(db: DatabaseSync, items: SeedPersistenceEntity[], reg: KeyRegistry): void {
+export function insertPersistenceEntities(
+  db: DatabaseSync,
+  items: SeedPersistenceEntity[],
+  reg: KeyRegistry,
+): void {
   const stmt = db.prepare(
     `INSERT INTO persistence_entities (name, category, storage_backend, schema_location, writer_symbols, reader_symbols, lifecycle, concurrency_notes, recovery_notes, status)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -409,7 +468,15 @@ export function insertFindings(db: DatabaseSync, findings: SeedFinding[], reg: K
      VALUES (?, ?, ?, ?, ?, ?, ?)`,
   );
   for (const f of findings) {
-    stmt.run(f.category, f.title, f.description, f.significance ?? null, f.recommendation ?? null, f.status, reg.tryResolve("evidence", f.evidenceKey));
+    stmt.run(
+      f.category,
+      f.title,
+      f.description,
+      f.significance ?? null,
+      f.recommendation ?? null,
+      f.status,
+      reg.tryResolve("evidence", f.evidenceKey),
+    );
   }
 }
 
@@ -419,7 +486,16 @@ export function insertOpenQuestions(db: DatabaseSync, items: SeedOpenQuestion[])
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
   );
   for (const q of items) {
-    stmt.run(q.category, q.question, q.evidenceInspected ?? null, q.reasonUnresolved ?? null, q.likelyInterpretation ?? null, q.verificationMethod ?? null, q.priority ?? null, q.status);
+    stmt.run(
+      q.category,
+      q.question,
+      q.evidenceInspected ?? null,
+      q.reasonUnresolved ?? null,
+      q.likelyInterpretation ?? null,
+      q.verificationMethod ?? null,
+      q.priority ?? null,
+      q.status,
+    );
   }
 }
 

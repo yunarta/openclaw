@@ -14,7 +14,8 @@
     "build": "tsc -p tsconfig.json",
     "build-db": "node dist/build/build-database.js",
     "rebuild-search": "node dist/build/rebuild-search.js",
-    "prepare-db": "npm run build && npm run build-db"
+    "generate-reports": "node dist/build/generate-reports.js",
+    "prepare-db": "npm run build && npm run build-db && npm run generate-reports"
   },
   "devDependencies": {
     "typescript": "^5.7.3",

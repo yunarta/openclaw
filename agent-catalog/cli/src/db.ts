@@ -1,6 +1,6 @@
+import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { fileURLToPath } from "node:url";
-import path from "node:path";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
@@ -16,7 +16,10 @@ export interface OpenCatalogOptions {
  * Opens the catalog database. Foreign key enforcement is turned on
  * explicitly since node:sqlite does not enable it by default.
  */
-export function openCatalog(dbPath: string = DEFAULT_DB_PATH, options: OpenCatalogOptions = {}): DatabaseSync {
+export function openCatalog(
+  dbPath: string = DEFAULT_DB_PATH,
+  options: OpenCatalogOptions = {},
+): DatabaseSync {
   const db = new DatabaseSync(dbPath, { readOnly: options.readOnly ?? false });
   db.exec("PRAGMA foreign_keys = ON;");
   return db;
