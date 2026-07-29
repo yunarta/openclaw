@@ -56,6 +56,37 @@ export const memorySessionSymbols: SeedSymbol[] = [
     applicationCoupling: "high",
   },
   {
+    key: "sym:recoverRestartAbortedMainSessions",
+    fileKey: "src/agents/main-session-restart-recovery-runtime.ts",
+    name: "recoverRestartAbortedMainSessions",
+    kind: "function",
+    startLine: 62,
+    endLine: 71,
+    signature:
+      "async function recoverRestartAbortedMainSessions(params: { cfg?, stateDir?, resumedSessionKeys?, activeSessionIds?, activeSessionKeys?, gatewayRuntime }): Promise<{ recovered: number; failed: number; skipped: number }>",
+    purpose:
+      "Resolves the run-resume-after-crash open question. Public entry point for restart-triggered recovery: iterates every per-agent restart-recovery store, resuming each marked session (stamped at shutdown or detected orphaned at startup) by re-dispatching it with a synthetic 'your previous turn was interrupted, continue from the transcript' system message. Re-exported from the src/agents/main-session-restart-recovery.ts barrel and wired into gateway boot from src/gateway/server-startup-post-attach.ts.",
+    architecturalRole: "orchestrator",
+    importance: "critical",
+    status: "confirmed",
+    reusable: false,
+    applicationCoupling: "high",
+  },
+  {
+    key: "sym:recoverStartupOrphanedMainSessions",
+    fileKey: "src/agents/main-session-restart-recovery-runtime.ts",
+    name: "recoverStartupOrphanedMainSessions",
+    kind: "function",
+    startLine: 293,
+    purpose:
+      "The hard-crash detection path: on gateway startup, scans session stores for sessions that still claim to be running but have no live owner in the new process -- the case a graceful-shutdown recovery marker cannot cover, since no shutdown code ran. Marks them for the same re-dispatch recovery flow as a graceful-restart abort.",
+    architecturalRole: "orchestrator",
+    importance: "critical",
+    status: "confirmed",
+    reusable: false,
+    applicationCoupling: "high",
+  },
+  {
     key: "sym:buildPromptSection",
     fileKey: "extensions/memory-core/src/prompt-section.ts",
     name: "buildPromptSection",
@@ -404,11 +435,14 @@ export const memorySessionFlows: SeedFlow[] = [
   {
     name: "run resume",
     category: "long-running",
-    status: "inferred",
+    status: "confirmed",
+    entrySymbolKey: "sym:recoverRestartAbortedMainSessions",
     description:
-      "Confirmed to exist distinctly for CLI-backed sessions (Codex's session-catalog-node-continue.ts, Claude's session-catalog.ts adoption/continue logic); embedded-runner-level resume after a process restart was not confirmed this pass.",
-    terminationCondition: "Not confirmed.",
-    errorBehavior: "Not confirmed.",
+      "RESOLVED in a follow-up pass: confirmed to exist distinctly for CLI-backed sessions (Codex's session-catalog-node-continue.ts, Claude's session-catalog.ts adoption/continue logic) AND for the embedded main-session path, via a dedicated always-on restart-recovery subsystem (src/agents/main-session-restart-recovery*.ts, ~1650 lines across 7+ files). This is session/turn-level resume-by-replay-instruction: a fresh attempt is re-dispatched with a synthetic system message telling the agent its turn was interrupted, not literal continuation of a half-finished provider stream.",
+    terminationCondition:
+      "Recovery succeeds (session re-dispatched and produces a reply, or a previously-produced-but-undelivered reply is delivered), the durable 3-attempt dispatch budget is exhausted (session tombstoned), or the transcript tail is judged unsafe to continue from (falls back to a resend notice instead of a silent re-run).",
+    errorBehavior:
+      "Fail-closed on ambiguity: an unhandled before_agent_reply hook checkpoint blocks recovery (a checkpoint cannot prove the same plugin code/config loaded post-restart); an unknown post-dispatch provider outcome for a message-tool-only reply is never replayed; startup reconciliation retries transient failures up to 3 times with exponential backoff; a repeatedly-failing session is tombstoned rather than looping forever.",
   },
 ];
 
@@ -476,6 +510,29 @@ export const memorySessionEvidence: SeedEvidence[] = [
     notes: "Read directly.",
   },
   {
+    key: "ev:restart-recovery-doc",
+    fileKey: "docs/gateway/restart-recovery.md",
+    claim:
+      "OpenClaw runs an always-on restart-recovery subsystem: interrupted main-session turns, subagent runs, and background tasks are detected (at turn admission, at graceful shutdown, and at startup scan for orphaned live-claim rows with no owner in the new process) and automatically resumed by re-dispatching the session with a synthetic continuation message, bounded by a 3-attempt durable budget, a transcript-tail safety check, and fail-closed handling of unresolved before_agent_reply hook checkpoints.",
+    evidenceType: "documentation",
+    confidence: 1.0,
+    notes:
+      "Read in full. Cross-checked against source (see ev:restart-recovery-source) rather than trusted alone, per repo doctrine that docs change with behavior but source is authoritative.",
+  },
+  {
+    key: "ev:restart-recovery-source",
+    fileKey: "src/agents/main-session-restart-recovery-runtime.ts",
+    symbolKey: "sym:recoverRestartAbortedMainSessions",
+    startLine: 1,
+    endLine: 100,
+    claim:
+      "recoverRestartAbortedMainSessions and recoverStartupOrphanedMainSessions are real, exported functions matching the documented behavior; src/agents/main-session-restart-recovery.ts is a 17-line public barrel re-exporting them, and src/gateway/server-startup-post-attach.ts lazily imports that barrel at gateway boot (line 57), confirming the recovery subsystem is actually wired into startup rather than being dead/unused code.",
+    evidenceType: "implementation",
+    confidence: 1.0,
+    notes:
+      "Read lines 1-100 of 389; the remaining ~1650 lines across sibling files were not read line-by-line this pass.",
+  },
+  {
     key: "ev:cron-runs-embedded-agent",
     fileKey: "src/cron/isolated-agent/run-executor.ts",
     symbolKey: "sym:executeCronRun",
@@ -539,13 +596,11 @@ export const memorySessionOpenQuestions: SeedOpenQuestion[] = [
     question:
       "Can an interrupted embedded run (process crash mid-turn, not a CLI-backend session) be resumed after restart, and if so, from what durable state?",
     evidenceInspected:
-      "session_nodes/session_windows/transcript_events confirm conversation-level durability; whether an in-flight (uncompleted) attempt's partial state is itself resumable, versus the run simply restarting from the last persisted turn, was not confirmed.",
-    reasonUnresolved: "Not traced this pass.",
-    likelyInterpretation:
-      "Most likely: no true mid-attempt resume for the embedded path -- a restart resumes the *session* (conversation history) but re-issues a fresh attempt/turn, not a fresh continuation of a half-finished provider stream. This differs from Codex/Claude CLI-backend sessions, which do have explicit 'continue' logic at the session-catalog level.",
-    verificationMethod:
-      "Read src/state/openclaw-agent-db-session-migrations.ts and search for any 'resume' or 'recover' logic tied to an in-flight (not-yet-terminal) run row.",
+      'RESOLVED in a follow-up pass, initially found via `grep -rl "crash" docs/` -> docs/gateway/restart-recovery.md (read in full, 242 lines), then cross-checked against source: src/agents/main-session-restart-recovery-runtime.ts (read lines 1-100 of 389, confirming recoverRestartAbortedMainSessions/recoverStartupOrphanedMainSessions signatures), src/agents/main-session-restart-recovery.ts (17-line public barrel), and confirmed wiring from src/gateway/server-startup-post-attach.ts (lazy import of the barrel at gateway boot, line 57). Answer: yes -- a purpose-built, always-on recovery subsystem (not the embedded run loop itself) detects and resumes interrupted main-session turns. Three detection points: (1) at turn admission, the user message + a recovery delivery claim are written in one SQLite transaction before model/hook execution; (2) at graceful shutdown, every session with an active run is stamped with a recovery marker before abort; (3) at startup, the gateway scans session stores for sessions still claiming to be running with no live owner in the new process (catches hard crashes with no shutdown code). A few seconds after boot, each marked session is re-dispatched with a synthetic system message telling the agent its previous turn was interrupted and to continue from the existing transcript; a fail-closed check on unhandled before_agent_reply hook checkpoints, a 3-attempt durable dispatch budget with tombstoning on exhaustion, and a transcript-tail safety check (falls back to a resend notice if the tail is unsafe to continue from, e.g. mid-tool-call or a stale pending approval) bound the retry behavior. This is session/turn-level resume-by-replay-instruction, not literal mid-attempt provider-stream continuation -- consistent with the original likely-interpretation guess.',
+    reasonUnresolved: "N/A -- resolved.",
+    likelyInterpretation: "N/A -- resolved with direct evidence.",
+    verificationMethod: "N/A -- resolved.",
     priority: "high",
-    status: "open",
+    status: "resolved",
   },
 ];

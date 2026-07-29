@@ -58,7 +58,7 @@ An in-flight run is cancelled via an AbortController owned by the lane controlle
 
 ## Flow: run resume
 
-**Status:** inferred  **Category:** long-running
+**Status:** confirmed  **Category:** long-running
 
 
 ## Persistence entities (per `persistence_entities` table)
@@ -81,5 +81,5 @@ An in-flight run is cancelled via an AbortController owned by the lane controlle
 - [high] Does a scheduled cron job execute through the same runEmbeddedAgent entry point as an interactive run, or a separate execution path?
   Likely: N/A -- resolved with direct evidence.
 - [high] Can an interrupted embedded run (process crash mid-turn, not a CLI-backend session) be resumed after restart, and if so, from what durable state?
-  Likely: Most likely: no true mid-attempt resume for the embedded path -- a restart resumes the *session* (conversation history) but re-issues a fresh attempt/turn, not a fresh continuation of a half-finished provider stream. This differs from Codex/Claude CLI-backend sessions, which do have explicit 'continue' logic at the session-catalog level.
+  Likely: N/A -- resolved with direct evidence.
 

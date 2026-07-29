@@ -575,4 +575,29 @@ export const modules: SeedModule[] = [
       { fileKey: "extensions/memory-core/src/memory/manager-search.ts", role: "implementation" },
     ],
   },
+  {
+    name: "main-session-restart-recovery",
+    rootPath: "src/agents",
+    category: "long-running",
+    status: "confirmed",
+    purpose:
+      "Resolves the 'can an interrupted embedded run be resumed after a crash' open question. An always-on subsystem (~1650 lines across 7+ files, name-prefixed main-session-restart-recovery-*) that detects a main-session turn interrupted by a graceful restart, a forced restart, or a hard crash, and automatically resumes it by re-dispatching the session with a synthetic continuation message.",
+    responsibilities:
+      "Marking a session for recovery at turn admission (durable claim written in the same transaction as the user message), at graceful-shutdown drain (recovery marker stamped before abort), and at startup (orphan scan for sessions claiming to run with no live owner in the new process); re-dispatching marked sessions with a synthetic 'continue from the transcript' system message; bounding retries with a 3-attempt durable dispatch budget and tombstoning on exhaustion; failing closed when an unhandled before_agent_reply hook checkpoint or an ambiguous post-dispatch provider outcome cannot be safely replayed; judging whether a transcript tail is safe to continue from before resuming.",
+    nonResponsibilities:
+      "Does not resume subagent sessions, cron sessions, or ACP-managed sessions (each has its own owner-specific recovery/re-run path per docs/gateway/restart-recovery.md). Does not perform literal mid-attempt provider-stream continuation -- recovery re-dispatches a fresh attempt with a continuation instruction, it does not resume a half-received streaming response.",
+    publicSurface:
+      "src/agents/main-session-restart-recovery.ts (barrel): recoverRestartAbortedMainSessions, recoverStartupOrphanedMainSessions, markRestartAbortedMainSessionsFromLocks.",
+    runtimeBehavior:
+      "src/gateway/server-startup-post-attach.ts lazily imports the barrel during gateway boot; a few seconds after startup, marked sessions are re-dispatched. Retries use exponential backoff up to 3 attempts; a durable per-cycle dispatch budget (also 3, retained across restarts) tombstones a session that keeps failing recovery instead of looping forever.",
+    extractionRelevance:
+      "high -- a standalone agentic REST API gateway needs an equivalent durable-claim-plus-startup-scan pattern to survive its own process restarts without losing or duplicating in-flight work; this is a concrete, already-hardened reference design (fail-closed hook checkpoints, transcript-tail safety check, idempotent dispatch identifiers).",
+    extractionDifficulty: "high",
+    files: [
+      { fileKey: "src/agents/main-session-restart-recovery.ts", role: "entry-point" },
+      { fileKey: "src/agents/main-session-restart-recovery-runtime.ts", role: "orchestrator" },
+      { fileKey: "src/agents/main-session-restart-recovery-marking.ts", role: "implementation" },
+      { fileKey: "src/agents/main-session-restart-recovery-checkpoint.ts", role: "implementation" },
+    ],
+  },
 ];

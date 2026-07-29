@@ -1558,4 +1558,41 @@ export const files: SeedFile[] = [
     purpose:
       "Large file (1069 lines); read the exported query function signatures and query construction this pass (lines 444-763). Exports searchVector (line 444, embedding-similarity search joining memory_index_chunks against memory_index_chunks_vec) and searchKeyword (line 646, FTS-based lexical search) as two distinct reader functions reached by MemoryIndexManager.search.",
   },
+
+  // --- Main-session restart/crash recovery ---
+  {
+    path: "docs/gateway/restart-recovery.md",
+    category: "long-running",
+    importance: "critical",
+    purpose:
+      "Read in full (242 lines). Product documentation for the always-on restart-recovery subsystem: what survives a restart (conversation history, interrupted turns, subagent runs, background tasks, queued deliveries, cron schedules), the three detection points (turn admission, graceful shutdown, startup orphan scan), automatic re-dispatch with a synthetic continuation message, safety valves (3-attempt durable budget, transcript-tail safety check, fail-closed hook checkpoints, crash-loop breaker), and what is explicitly not resumed. Cross-checked against source in the same pass.",
+  },
+  {
+    path: "src/agents/main-session-restart-recovery.ts",
+    category: "long-running",
+    importance: "high",
+    purpose:
+      "Read in full (17 lines). Public barrel re-exporting recoverRestartAbortedMainSessions, recoverStartupOrphanedMainSessions, and markRestartAbortedMainSessionsFromLocks -- the seam src/gateway/server-startup-post-attach.ts lazily imports at gateway boot.",
+  },
+  {
+    path: "src/agents/main-session-restart-recovery-runtime.ts",
+    category: "long-running",
+    importance: "critical",
+    purpose:
+      "Read lines 1-100 of 389. Exports recoverRestartAbortedMainSessions (the graceful-restart/general recovery entry point, iterating per-agent recovery stores) and recoverStartupOrphanedMainSessions (the hard-crash detection path: scans session stores for sessions still claiming to run with no live owner in the new process). Both re-dispatch a marked session with a synthetic continuation message.",
+  },
+  {
+    path: "src/agents/main-session-restart-recovery-marking.ts",
+    category: "long-running",
+    importance: "high",
+    purpose:
+      "Confirmed to exist (376 lines) and exports markStartupOrphanedMainSessionsForRecovery (referenced from main-session-restart-recovery-runtime.ts); the marking half of the detect-then-recover split -- stamps a session as needing recovery at shutdown or when found orphaned at startup. Not read line-by-line this pass.",
+  },
+  {
+    path: "src/agents/main-session-restart-recovery-checkpoint.ts",
+    category: "long-running",
+    importance: "medium",
+    purpose:
+      "Confirmed to exist (495 lines); per the docs, records before_agent_reply hook checkpoint results so recovery can fail closed when a hook was interrupted mid-call (a checkpoint alone cannot prove the same plugin code/config loaded after the restart). Not read line-by-line this pass.",
+  },
 ];

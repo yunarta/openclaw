@@ -48,11 +48,11 @@ or `SELECT * FROM unresolved_high_priority;` directly against `catalog.sqlite`.
 ## [high] Can an interrupted embedded run (process crash mid-turn, not a CLI-backend session) be resumed after restart, and if so, from what durable state?
 
 - **Category:** long-running-execution
-- **Status:** open
-- **Evidence inspected:** session_nodes/session_windows/transcript_events confirm conversation-level durability; whether an in-flight (uncompleted) attempt's partial state is itself resumable, versus the run simply restarting from the last persisted turn, was not confirmed.
-- **Why unresolved:** Not traced this pass.
-- **Likely interpretation:** Most likely: no true mid-attempt resume for the embedded path -- a restart resumes the *session* (conversation history) but re-issues a fresh attempt/turn, not a fresh continuation of a half-finished provider stream. This differs from Codex/Claude CLI-backend sessions, which do have explicit 'continue' logic at the session-catalog level.
-- **How to verify:** Read src/state/openclaw-agent-db-session-migrations.ts and search for any 'resume' or 'recover' logic tied to an in-flight (not-yet-terminal) run row.
+- **Status:** resolved
+- **Evidence inspected:** RESOLVED in a follow-up pass, initially found via `grep -rl "crash" docs/` -> docs/gateway/restart-recovery.md (read in full, 242 lines), then cross-checked against source: src/agents/main-session-restart-recovery-runtime.ts (read lines 1-100 of 389, confirming recoverRestartAbortedMainSessions/recoverStartupOrphanedMainSessions signatures), src/agents/main-session-restart-recovery.ts (17-line public barrel), and confirmed wiring from src/gateway/server-startup-post-attach.ts (lazy import of the barrel at gateway boot, line 57). Answer: yes -- a purpose-built, always-on recovery subsystem (not the embedded run loop itself) detects and resumes interrupted main-session turns. Three detection points: (1) at turn admission, the user message + a recovery delivery claim are written in one SQLite transaction before model/hook execution; (2) at graceful shutdown, every session with an active run is stamped with a recovery marker before abort; (3) at startup, the gateway scans session stores for sessions still claiming to be running with no live owner in the new process (catches hard crashes with no shutdown code). A few seconds after boot, each marked session is re-dispatched with a synthetic system message telling the agent its previous turn was interrupted and to continue from the existing transcript; a fail-closed check on unhandled before_agent_reply hook checkpoints, a 3-attempt durable dispatch budget with tombstoning on exhaustion, and a transcript-tail safety check (falls back to a resend notice if the tail is unsafe to continue from, e.g. mid-tool-call or a stale pending approval) bound the retry behavior. This is session/turn-level resume-by-replay-instruction, not literal mid-attempt provider-stream continuation -- consistent with the original likely-interpretation guess.
+- **Why unresolved:** N/A -- resolved.
+- **Likely interpretation:** N/A -- resolved with direct evidence.
+- **How to verify:** N/A -- resolved.
 
 ## [high] What module writes to and reads from the semantic memory index tables (memory_index_chunks, memory_embedding_cache)?
 
