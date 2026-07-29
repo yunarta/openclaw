@@ -1,0 +1,23 @@
+{
+  "name": "agent-catalog-cli",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Query CLI for the OpenClaw agentic runtime architecture catalog (agent-catalog/catalog.sqlite).",
+  "type": "module",
+  "bin": {
+    "agent-catalog": "dist/cli.js"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "build-db": "node dist/build/build-database.js",
+    "rebuild-search": "node dist/build/rebuild-search.js",
+    "prepare-db": "npm run build && npm run build-db"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3",
+    "@types/node": "^24.0.0"
+  }
+}
