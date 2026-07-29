@@ -30,11 +30,11 @@ or `SELECT * FROM unresolved_high_priority;` directly against `catalog.sqlite`.
 ## [high] What is the exact discriminated-union type and full set of tag values for the internal agent-run event model (the AssistantMessageEventStreamContract's event payloads)?
 
 - **Category:** events
-- **Status:** open
-- **Evidence inspected:** Confirmed the type name (AssistantMessageEventStreamContract) and the factory (createAssistantMessageEventStream) via src/llm/stream.ts; confirmed one concrete event shape ({ type: "error", reason: "error", error: AssistantMessage }) from the same file's error-handling branch. The full event union (text-delta, reasoning-delta, tool-call-*, usage-update, etc.) was not read from packages/ai/src/types.ts this pass.
-- **Why unresolved:** Deprioritized after the subagent failures in favor of confirming the loop/provider architecture first.
-- **Likely interpretation:** packages/ai/src/types.ts almost certainly contains the full event union, given it's the package's own canonical type file.
-- **How to verify:** Read packages/ai/src/types.ts in full and enumerate every event/tag value.
+- **Status:** resolved
+- **Evidence inspected:** RESOLVED in a follow-up pass: packages/ai/src/types.ts turned out to be a 2-line re-export of @openclaw/llm-core (`export * from "@openclaw/llm-core"`). Read packages/llm-core/src/types.ts (691 lines) in full. The `AssistantMessageEvent` union (lines 397-418) has exactly 12 variants: start, text_start, text_delta, text_end, thinking_start, thinking_delta, thinking_end, toolcall_start, toolcall_delta, toolcall_end, done, error. See the events table for the full per-variant field list, and the `llm-core-foundation` module/finding for the architectural implication (a THIRD standalone package, more foundational than packages/ai).
+- **Why unresolved:** N/A -- resolved.
+- **Likely interpretation:** N/A -- resolved with direct evidence.
+- **How to verify:** N/A -- resolved.
 
 ## [high] What does packages/gateway-protocol/ define, and how does it relate to the AssistantMessageEventStreamContract event model?
 

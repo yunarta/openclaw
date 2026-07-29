@@ -20,17 +20,17 @@ Claude/Anthropic has two paths: (1) default -- the embedded runner calls the Ant
 
 **Status:** confirmed  **Category:** streaming  **Maturity:** production
 
-Every provider's wire-format stream (Anthropic SSE, OpenAI Responses SSE, etc.) is parsed by a per-family transport module in packages/ai/src/transports/*.ts and normalized into one AssistantMessageEventStreamContract event sequence, exposed by src/llm/stream.ts's stream().
+Every provider's wire-format stream (Anthropic SSE, OpenAI Responses SSE, etc.) is parsed by a per-family transport module in packages/ai/src/transports/*.ts and normalized into one AssistantMessageEvent sequence (12 variants: start/text_*/thinking_*/toolcall_*/done/error, packages/llm-core/src/types.ts:397-418), delivered through an AssistantMessageEventStreamContract, exposed by src/llm/stream.ts's stream().
 
-> createAssistantMessageEventStream (packages/ai/src/utils/event-stream.ts) is the shared push/end-able stream primitive every transport writes into.
+> createAssistantMessageEventStream (packages/ai/src/utils/event-stream.ts) is the shared push/end-able stream primitive every transport writes into. The event union itself is defined once in @openclaw/llm-core and re-exported by @openclaw/ai and src/llm -- there is exactly one event contract for the whole provider stack, not a per-provider one.
 
 ## Reasoning events
 
 **Status:** confirmed  **Category:** provider  **Maturity:** production
 
-Reasoning/thinking support differs sharply by provider family. Anthropic: extended-thinking blocks whose opaque signature must be replayed on continuation (anthropic-thinking-replay.ts). OpenAI/Codex family: a configurable reasoning-effort level mapped onto the Responses API's reasoning.effort parameter (openai-reasoning-effort.ts), plus Codex's own encrypted/opaque reasoning continuation state managed inside the Codex app-server itself (outside OpenClaw's direct visibility once delegated to the harness).
+The shared ThinkingContent type (packages/llm-core/src/types.ts:243-251) exposes real reasoning text by default (`thinking: string`), plus an opaque provider-specific replay token (`thinkingSignature`) and a `redacted` flag for safety-filtered content. Per-provider behavior still differs: Anthropic replays the thinking-block signature on continuation (anthropic-thinking-replay.ts); OpenAI/Codex family maps a configurable reasoning-effort level onto the Responses API's reasoning.effort parameter (openai-reasoning-effort.ts) and Codex's own app-server manages its reasoning continuation state internally, outside OpenClaw's direct visibility once delegated to the harness. Google's ToolCall.thoughtSignature is a separate, tool-call-scoped opaque thought-context token.
 
-> See findings 'reasoning continuation state' and 'reasoning configuration' for the exact confidence level on each provider's mechanism.
+> ThinkingContent is the type-level source of truth for 'is reasoning hidden/summarized/exposed': exposed as text, with an orthogonal opaque-signature mechanism only for continuation. See findings 'reasoning continuation state' and 'reasoning configuration' for remaining per-provider confidence gaps.
 
 ### Flow: Codex request
 

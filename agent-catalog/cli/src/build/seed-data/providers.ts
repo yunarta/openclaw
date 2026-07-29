@@ -190,6 +190,72 @@ export const providerSymbols: SeedSymbol[] = [
     reusable: false,
     applicationCoupling: "high",
   },
+  {
+    key: "sym:AssistantMessageEvent",
+    fileKey: "packages/llm-core/src/types.ts",
+    name: "AssistantMessageEvent",
+    kind: "type",
+    startLine: 397,
+    endLine: 418,
+    signature: 'type AssistantMessageEvent = { type: "start"; ... } | ... (12 variants)',
+    purpose:
+      "The canonical stream event discriminated union: start, text_start, text_delta, text_end, thinking_start, thinking_delta, thinking_end, toolcall_start, toolcall_delta, toolcall_end, done, error. Every provider adapter in packages/ai normalizes into this shape.",
+    architecturalRole: "event-contract",
+    importance: "critical",
+    status: "confirmed",
+    reusable: true,
+    applicationCoupling: "low",
+  },
+  {
+    key: "sym:ThinkingContent",
+    fileKey: "packages/llm-core/src/types.ts",
+    name: "ThinkingContent",
+    kind: "interface",
+    startLine: 243,
+    endLine: 251,
+    signature:
+      'interface ThinkingContent { type: "thinking"; thinking: string; thinkingSignature?: string; redacted?: boolean }',
+    purpose:
+      "Provider reasoning/thinking content block. `thinking` carries real reasoning text; `thinkingSignature` is an opaque provider replay token (e.g. OpenAI Responses reasoning item ID); `redacted` marks safety-filtered content whose encrypted payload lives in thinkingSignature instead.",
+    architecturalRole: "data-shape",
+    importance: "critical",
+    status: "confirmed",
+    reusable: true,
+    applicationCoupling: "low",
+  },
+  {
+    key: "sym:llmcore.Tool",
+    fileKey: "packages/llm-core/src/types.ts",
+    name: "Tool",
+    kind: "interface",
+    startLine: 376,
+    endLine: 380,
+    signature:
+      "interface Tool<TParameters extends TSchema = TSchema> { name: string; description: string; parameters: TParameters }",
+    purpose:
+      "Wire-facing tool declaration sent to a provider; `parameters` is a TypeBox TSchema, validated against an incoming ToolCall by ValidateToolArgumentsFn (types.ts:691).",
+    architecturalRole: "data-shape",
+    importance: "high",
+    status: "confirmed",
+    reusable: true,
+    applicationCoupling: "low",
+  },
+  {
+    key: "sym:ValidateToolArgumentsFn",
+    fileKey: "packages/llm-core/src/types.ts",
+    name: "ValidateToolArgumentsFn",
+    kind: "type",
+    startLine: 691,
+    endLine: 691,
+    signature: "type ValidateToolArgumentsFn = (tool: Tool, toolCall: ToolCall) => unknown",
+    purpose:
+      "Function-shape contract for validating a ToolCall's arguments against its declaring Tool's TypeBox parameters schema. Concrete implementation expected in packages/llm-core/src/validation.ts (not read line-by-line this pass).",
+    architecturalRole: "interface",
+    importance: "high",
+    status: "confirmed",
+    reusable: true,
+    applicationCoupling: "low",
+  },
 ];
 
 export const providerCapabilities: SeedCapability[] = [
@@ -230,13 +296,14 @@ export const providerCapabilities: SeedCapability[] = [
     maturity: "production",
     reusable: true,
     description:
-      "Every provider's wire-format stream (Anthropic SSE, OpenAI Responses SSE, etc.) is parsed by a per-family transport module in packages/ai/src/transports/*.ts and normalized into one AssistantMessageEventStreamContract event sequence, exposed by src/llm/stream.ts's stream().",
+      "Every provider's wire-format stream (Anthropic SSE, OpenAI Responses SSE, etc.) is parsed by a per-family transport module in packages/ai/src/transports/*.ts and normalized into one AssistantMessageEvent sequence (12 variants: start/text_*/thinking_*/toolcall_*/done/error, packages/llm-core/src/types.ts:397-418), delivered through an AssistantMessageEventStreamContract, exposed by src/llm/stream.ts's stream().",
     implementationSummary:
-      "createAssistantMessageEventStream (packages/ai/src/utils/event-stream.ts) is the shared push/end-able stream primitive every transport writes into.",
+      "createAssistantMessageEventStream (packages/ai/src/utils/event-stream.ts) is the shared push/end-able stream primitive every transport writes into. The event union itself is defined once in @openclaw/llm-core and re-exported by @openclaw/ai and src/llm -- there is exactly one event contract for the whole provider stack, not a per-provider one.",
     symbols: [
       { symbolKey: "sym:llm.stream", role: "entry-point" },
       { symbolKey: "sym:createAssistantMessageEventStream", role: "event-producer" },
       { symbolKey: "sym:anthropicTransportStream", role: "adapter" },
+      { symbolKey: "sym:AssistantMessageEvent", role: "interface" },
     ],
   },
   {
@@ -246,10 +313,11 @@ export const providerCapabilities: SeedCapability[] = [
     maturity: "production",
     reusable: true,
     description:
-      "Reasoning/thinking support differs sharply by provider family. Anthropic: extended-thinking blocks whose opaque signature must be replayed on continuation (anthropic-thinking-replay.ts). OpenAI/Codex family: a configurable reasoning-effort level mapped onto the Responses API's reasoning.effort parameter (openai-reasoning-effort.ts), plus Codex's own encrypted/opaque reasoning continuation state managed inside the Codex app-server itself (outside OpenClaw's direct visibility once delegated to the harness).",
+      "The shared ThinkingContent type (packages/llm-core/src/types.ts:243-251) exposes real reasoning text by default (`thinking: string`), plus an opaque provider-specific replay token (`thinkingSignature`) and a `redacted` flag for safety-filtered content. Per-provider behavior still differs: Anthropic replays the thinking-block signature on continuation (anthropic-thinking-replay.ts); OpenAI/Codex family maps a configurable reasoning-effort level onto the Responses API's reasoning.effort parameter (openai-reasoning-effort.ts) and Codex's own app-server manages its reasoning continuation state internally, outside OpenClaw's direct visibility once delegated to the harness. Google's ToolCall.thoughtSignature is a separate, tool-call-scoped opaque thought-context token.",
     implementationSummary:
-      "See findings 'reasoning continuation state' and 'reasoning configuration' for the exact confidence level on each provider's mechanism.",
+      "ThinkingContent is the type-level source of truth for 'is reasoning hidden/summarized/exposed': exposed as text, with an orthogonal opaque-signature mechanism only for continuation. See findings 'reasoning continuation state' and 'reasoning configuration' for remaining per-provider confidence gaps.",
     symbols: [
+      { symbolKey: "sym:ThinkingContent", role: "interface" },
       { symbolKey: "sym:anthropicThinkingReplay", role: "implementation" },
       { symbolKey: "sym:openaiReasoningEffort", role: "implementation" },
     ],
@@ -404,6 +472,54 @@ export const providerEvidence: SeedEvidence[] = [
     confidence: 1.0,
     notes: "Grep-confirmed dependency line.",
   },
+  {
+    key: "ev:llm-core-reexport",
+    fileKey: "packages/ai/src/types.ts",
+    startLine: 1,
+    endLine: 2,
+    claim:
+      'packages/ai/src/types.ts is a 2-line file: `export * from "@openclaw/llm-core"`. The actual type definitions live in the separate packages/llm-core workspace package.',
+    evidenceType: "implementation",
+    confidence: 1.0,
+    notes: "Read directly in full.",
+  },
+  {
+    key: "ev:assistant-message-event-union",
+    fileKey: "packages/llm-core/src/types.ts",
+    symbolKey: "sym:AssistantMessageEvent",
+    startLine: 397,
+    endLine: 418,
+    claim:
+      "The full AssistantMessageEvent discriminated union has exactly 12 variants: start, text_start, text_delta, text_end, thinking_start, thinking_delta, thinking_end, toolcall_start, toolcall_delta, toolcall_end, done, error.",
+    evidenceType: "type-definition",
+    confidence: 1.0,
+    notes: "Read directly in full; resolves open question 'full event union'.",
+  },
+  {
+    key: "ev:thinking-content-shape",
+    fileKey: "packages/llm-core/src/types.ts",
+    symbolKey: "sym:ThinkingContent",
+    startLine: 243,
+    endLine: 251,
+    claim:
+      "ThinkingContent exposes real reasoning text (`thinking: string`) by default, with a separate opaque `thinkingSignature` used only for provider continuation/replay, and a `redacted` boolean for safety-filtered content (whose encrypted payload then lives in thinkingSignature).",
+    evidenceType: "type-definition",
+    confidence: 1.0,
+    notes: "Read directly in full.",
+  },
+  {
+    key: "ev:tool-typebox-parameters",
+    fileKey: "packages/llm-core/src/types.ts",
+    symbolKey: "sym:llmcore.Tool",
+    startLine: 373,
+    endLine: 380,
+    claim:
+      'The wire-facing Tool interface types `parameters` as a TypeBox TSchema (`import type { TSchema } from "typebox"`), not a plain JSON-Schema object -- distinct from src/tools/types.ts\'s ToolDescriptor.inputSchema, which is a plain JsonObject.',
+    evidenceType: "type-definition",
+    confidence: 1.0,
+    notes:
+      "Read directly. The bridge between ToolDescriptor.inputSchema (JsonObject) and this Tool.parameters (TSchema) was not located this pass -- see open_questions.",
+  },
 ];
 
 export const providerSnippets: SeedSnippet[] = [
@@ -438,19 +554,54 @@ registerBuiltInApiProviders(defaultApiRegistry);`,
     architecturalSignificance:
       "This is the strongest evidence in the whole repository that a standalone gateway's Provider Router could depend on @openclaw/ai largely as-is.",
   },
+  {
+    fileKey: "packages/llm-core/src/types.ts",
+    symbolKey: "sym:ThinkingContent",
+    title: "ThinkingContent: reasoning text vs. opaque replay signature vs. redaction",
+    startLine: 242,
+    endLine: 251,
+    content: `/** Provider reasoning/thinking content block, including opaque replay signatures. */
+export interface ThinkingContent {
+  type: "thinking";
+  thinking: string;
+  thinkingSignature?: string; // e.g., for OpenAI responses, the reasoning item ID
+  /** When true, the thinking content was redacted by safety filters. The opaque
+   *  encrypted payload is stored in \`thinkingSignature\` so it can be passed back
+   *  to the API for multi-turn continuity. */
+  redacted?: boolean;
+}`,
+    explanation:
+      "Directly settles the catalog's required 'hidden reasoning vs. summary vs. neither' question: reasoning is exposed as real text (`thinking`) by default; `thinkingSignature` is a separate, opaque, provider-specific continuation token; `redacted` is the only case where the readable text is withheld, and even then the encrypted payload is preserved (not discarded) so the model can keep referencing it on the next turn.",
+    architecturalSignificance:
+      "One shared, provider-agnostic reasoning contract for the whole stack -- Anthropic/OpenAI/Google-specific reasoning quirks are handled by mapping into/out of this one shape, not by exposing three different reasoning models to callers.",
+  },
+  {
+    fileKey: "packages/llm-core/src/types.ts",
+    symbolKey: "sym:AssistantMessageEvent",
+    title: "The full 12-variant stream event union",
+    startLine: 397,
+    endLine: 418,
+    content: `export type AssistantMessageEvent =
+  | { type: "start"; partial: AssistantMessage }
+  | { type: "text_start"; contentIndex: number; partial: AssistantMessage }
+  | { type: "text_delta"; contentIndex: number; delta: string; partial?: AssistantMessage }
+  | { type: "text_end"; contentIndex: number; content: string; partial: AssistantMessage }
+  | { type: "thinking_start"; contentIndex: number; partial: AssistantMessage }
+  | { type: "thinking_delta"; contentIndex: number; delta: string; partial: AssistantMessage }
+  | { type: "thinking_end"; contentIndex: number; content: string; partial: AssistantMessage }
+  | { type: "toolcall_start"; contentIndex: number; partial: AssistantMessage }
+  | { type: "toolcall_delta"; contentIndex: number; delta: string; partial: AssistantMessage }
+  | { type: "toolcall_end"; contentIndex: number; toolCall: ToolCall; partial: AssistantMessage }
+  | { type: "done"; reason: Extract<StopReason, "stop" | "length" | "toolUse">; message: AssistantMessage }
+  | { type: "error"; reason: Extract<StopReason, "aborted" | "error">; error: AssistantMessage };`,
+    explanation:
+      "The complete, verbatim event contract every provider adapter streams through. Note text_delta is the only variant allowed to omit `partial` (to avoid one full AssistantMessage snapshot per token); every other delta/end event always carries the current partial snapshot.",
+    architecturalSignificance:
+      "This is the exact shape a REST gateway's SSE/WebSocket event envelope should be designed around -- it is already transport-agnostic and provider-agnostic.",
+  },
 ];
 
 export const providerDataTypes: SeedDataType[] = [
-  {
-    key: "dt:AssistantMessage",
-    name: "AssistantMessage",
-    category: "provider-response",
-    status: "confirmed",
-    persistenceScope: "run",
-    providerSpecific: false,
-    purpose:
-      "The canonical normalized model response shape returned by complete()/accumulated from stream(); referenced by name in src/llm/stream.ts's type imports and used to build synthetic error messages (role, content, api, provider, model, usage, stopReason, errorMessage?, timestamp).",
-  },
   {
     key: "dt:AssistantMessageEventStreamContract",
     name: "AssistantMessageEventStreamContract",
@@ -459,7 +610,30 @@ export const providerDataTypes: SeedDataType[] = [
     persistenceScope: "run",
     providerSpecific: false,
     purpose:
-      'The canonical push/end-able event-stream object type returned by stream(); created via createAssistantMessageEventStream() and pushed into with typed events (e.g. { type: "error", reason: "error", error: AssistantMessage }, confirmed from src/llm/stream.ts\'s deferUntilTransportRuntimeHost).',
+      "packages/llm-core/src/types.ts:420-427 (re-exported through packages/ai and src/llm). The canonical push/end-able event-stream object type returned by stream(): push(event), end(result?), result(): Promise<AssistantMessage>. Created via createAssistantMessageEventStream().",
+    fields: [
+      {
+        name: "push",
+        typeText: "(event: AssistantMessageEvent) => void",
+        required: true,
+        persisted: false,
+        description: "Queue one stream event for consumers.",
+      },
+      {
+        name: "end",
+        typeText: "(result?: AssistantMessage) => void",
+        required: true,
+        persisted: false,
+        description: "Complete the stream and optionally resolve the final message.",
+      },
+      {
+        name: "result",
+        typeText: "() => Promise<AssistantMessage>",
+        required: true,
+        persisted: false,
+        description: "Final assistant message produced by the stream.",
+      },
+    ],
   },
   {
     key: "dt:Model",
@@ -469,7 +643,49 @@ export const providerDataTypes: SeedDataType[] = [
     persistenceScope: "session",
     providerSpecific: false,
     purpose:
-      "Generic model reference type parameterized by Api family (Model<TApi extends Api>); carries at least id, api, provider fields (inferred from usage in createRuntimeHostErrorMessage).",
+      "packages/llm-core/src/types.ts:618-668. Generic model reference parameterized by Api family (Model<TApi extends Api>): id/name/api/provider/baseUrl, reasoning capability + per-level thinkingLevelMap, input modalities, cost table, contextWindow (+ optional runtime-capped contextTokens), maxTokens, provider-specific params/headers, and a TApi-conditional `compat` field (OpenAICompletionsCompat | OpenAIResponsesCompat | AnthropicMessagesCompat | never).",
+    fields: [
+      { name: "id", typeText: "string", required: true, persisted: true },
+      { name: "name", typeText: "string", required: true, persisted: true },
+      { name: "api", typeText: "TApi", required: true, persisted: true },
+      { name: "provider", typeText: "Provider", required: true, persisted: true },
+      { name: "baseUrl", typeText: "string", required: true, persisted: true },
+      { name: "reasoning", typeText: "boolean", required: true, persisted: true },
+      {
+        name: "thinkingLevelMap",
+        typeText: "ThinkingLevelMap | undefined",
+        required: false,
+        persisted: true,
+        description:
+          "Maps OpenClaw thinking levels to provider/model-specific values; null marks a level unsupported.",
+      },
+      { name: "input", typeText: '("text" | "image")[]', required: true, persisted: true },
+      {
+        name: "cost",
+        typeText: "{input;output;cacheRead;cacheWrite} ($/million tokens)",
+        required: true,
+        persisted: true,
+      },
+      { name: "contextWindow", typeText: "number", required: true, persisted: true },
+      {
+        name: "contextTokens",
+        typeText: "number | undefined",
+        required: false,
+        persisted: true,
+        description: "Optional effective runtime cap for compaction/session budgeting.",
+      },
+      { name: "maxTokens", typeText: "number", required: true, persisted: true },
+      {
+        name: "compat",
+        typeText:
+          "OpenAICompletionsCompat | OpenAIResponsesCompat | AnthropicMessagesCompat | never",
+        required: false,
+        persisted: true,
+        providerSpecific: true,
+        description:
+          "Compatibility overrides for OpenAI-compatible / Anthropic-compatible endpoints; auto-detected from baseUrl if unset.",
+      },
+    ],
   },
 ];
 
@@ -568,5 +784,25 @@ export const providerRelationships: SeedRelationship[] = [
     status: "confirmed",
     description:
       "extensions/anthropic has no @anthropic-ai/sdk dependency, so its Claude requests must go through packages/ai's anthropic adapter.",
+  },
+  {
+    fromType: "module",
+    fromKey: "ai-provider-package",
+    relationshipType: "depends-on",
+    toType: "module",
+    toKey: "llm-core-foundation",
+    status: "confirmed",
+    description:
+      'packages/ai/src/types.ts is a 1-line `export * from "@openclaw/llm-core"`; the package depends on llm-core for every shared type.',
+  },
+  {
+    fromType: "symbol",
+    fromKey: "sym:llmcore.Tool",
+    relationshipType: "validates",
+    toType: "symbol",
+    toKey: "sym:ValidateToolArgumentsFn",
+    status: "confirmed",
+    description:
+      "A Tool's TypeBox `parameters` schema is validated against an incoming ToolCall by ValidateToolArgumentsFn.",
   },
 ];

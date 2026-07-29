@@ -110,6 +110,30 @@ export const extraFindings: SeedFinding[] = [
     status: "confirmed",
   },
   {
+    category: "architecture",
+    title:
+      "packages/ai re-exports @openclaw/llm-core, a third standalone package that is the true type foundation",
+    description:
+      'packages/ai/src/types.ts is a 2-line file: `export * from "@openclaw/llm-core"`. The actual AssistantMessage/ToolCall/ThinkingContent/Usage/AssistantMessageEvent/Model/Tool type definitions all live in packages/llm-core/src/types.ts (691 lines), a separate workspace package (name: "@openclaw/llm-core", private, version 0.0.0-private) with its own package.json, dist build, and a dedicated validation.ts. packages/ai depends on it for types; the actual provider adapters (packages/ai/src/providers/*.ts) presumably import both.',
+    significance:
+      "The extraction hierarchy is three-deep, not two: llm-core (pure types + validation, zero provider logic) -> ai (provider adapters + streaming runtime, depends on llm-core) -> OpenClaw core's src/llm (host-policy facade, depends on ai). A standalone gateway's agent-contract layer should be built directly on @openclaw/llm-core, which is even more reusable than @openclaw/ai since it has no HTTP/SSE logic at all -- just types and a validation.ts helper.",
+    recommendation:
+      "Update EXTRACTION-GUIDE.md's agent-contract layer to name packages/llm-core as the primary source, not just packages/ai/src/types.ts.",
+    status: "confirmed",
+  },
+  {
+    category: "reasoning continuation state",
+    title:
+      "Reasoning/thinking content is exposed as real text, not just a summary, with a separate opaque replay signature",
+    description:
+      "packages/llm-core/src/types.ts's ThinkingContent (lines 243-251) has three fields: `thinking: string` (the actual reasoning text, exposed to callers), `thinkingSignature?: string` (an opaque provider token -- e.g. the OpenAI Responses reasoning item ID -- that must be replayed on continuation but carries no readable content itself), and `redacted?: boolean` (true when safety filters redacted the content; in that case the encrypted payload is stored in thinkingSignature instead of thinking). ToolCall separately has `thoughtSignature` for Google's opaque per-call thought-context token.",
+    significance:
+      "Directly answers 'does the system preserve hidden reasoning, summaries of reasoning, or neither': the answer is real reasoning text by default, with a distinct opaque-signature mechanism only for continuation/replay and only falling back to redaction when the provider's safety filter requires it. This is provider-agnostic at the llm-core type level; per-provider behavior (whether Anthropic/OpenAI/Google actually populate `thinking` vs. only `redacted` content) still depends on each provider adapter and was not verified per-provider this pass.",
+    recommendation:
+      "Update the 'reasoning events' capability and the Claude/Codex provider findings to cite ThinkingContent directly instead of inferring from file names.",
+    status: "confirmed",
+  },
+  {
     category: "coverage-gap",
     title:
       "This catalog pass is narrower than originally scoped due to a mid-task resource constraint",
@@ -129,15 +153,12 @@ export const extraOpenQuestions: SeedOpenQuestion[] = [
     question:
       "What is the exact discriminated-union type and full set of tag values for the internal agent-run event model (the AssistantMessageEventStreamContract's event payloads)?",
     evidenceInspected:
-      'Confirmed the type name (AssistantMessageEventStreamContract) and the factory (createAssistantMessageEventStream) via src/llm/stream.ts; confirmed one concrete event shape ({ type: "error", reason: "error", error: AssistantMessage }) from the same file\'s error-handling branch. The full event union (text-delta, reasoning-delta, tool-call-*, usage-update, etc.) was not read from packages/ai/src/types.ts this pass.',
-    reasonUnresolved:
-      "Deprioritized after the subagent failures in favor of confirming the loop/provider architecture first.",
-    likelyInterpretation:
-      "packages/ai/src/types.ts almost certainly contains the full event union, given it's the package's own canonical type file.",
-    verificationMethod:
-      "Read packages/ai/src/types.ts in full and enumerate every event/tag value.",
+      'RESOLVED in a follow-up pass: packages/ai/src/types.ts turned out to be a 2-line re-export of @openclaw/llm-core (`export * from "@openclaw/llm-core"`). Read packages/llm-core/src/types.ts (691 lines) in full. The `AssistantMessageEvent` union (lines 397-418) has exactly 12 variants: start, text_start, text_delta, text_end, thinking_start, thinking_delta, thinking_end, toolcall_start, toolcall_delta, toolcall_end, done, error. See the events table for the full per-variant field list, and the `llm-core-foundation` module/finding for the architectural implication (a THIRD standalone package, more foundational than packages/ai).',
+    reasonUnresolved: "N/A -- resolved.",
+    likelyInterpretation: "N/A -- resolved with direct evidence.",
+    verificationMethod: "N/A -- resolved.",
     priority: "high",
-    status: "open",
+    status: "resolved",
   },
   {
     category: "gateway-protocol",

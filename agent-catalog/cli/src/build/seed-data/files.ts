@@ -8,6 +8,43 @@ import type { SeedFile } from "../seed-types.js";
  * implying deep verification.
  */
 export const files: SeedFile[] = [
+  // --- @openclaw/llm-core: the type/validation foundation packages/ai re-exports ---
+  {
+    path: "packages/llm-core/package.json",
+    category: "provider",
+    importance: "critical",
+    purpose:
+      'Package manifest for @openclaw/llm-core, version "0.0.0-private". Confirmed to exist and be depended on by packages/ai (whose src/types.ts is a 1-line `export * from "@openclaw/llm-core"`). No provider/HTTP logic -- pure shared types plus a validation helper.',
+  },
+  {
+    path: "packages/llm-core/src/types.ts",
+    category: "agent-runtime",
+    importance: "critical",
+    purpose:
+      "The true source of AssistantMessage, ThinkingContent, ToolCall, Usage, Message, Tool (TypeBox-typed), Context, Model, and the AssistantMessageEvent discriminated union (12 variants). Read in full (691 lines) this pass.",
+  },
+  {
+    path: "packages/llm-core/src/index.ts",
+    category: "agent-runtime",
+    importance: "high",
+    purpose:
+      "Confirmed to exist; the package's public entry barrel (not read line-by-line this pass).",
+  },
+  {
+    path: "packages/llm-core/src/validation.ts",
+    category: "tool-runtime",
+    importance: "high",
+    purpose:
+      "Confirmed to exist alongside types.ts and its own validation.test.ts; likely implements ValidateToolArgumentsFn (declared in types.ts line 691) against a Tool's TypeBox `parameters` schema. Not read line-by-line this pass.",
+  },
+  {
+    path: "packages/llm-core/src/utils/diagnostics.ts",
+    category: "events",
+    importance: "medium",
+    purpose:
+      "Defines AssistantMessageDiagnostic and DiagnosticErrorInfo, re-exported from types.ts line 2. Holds redacted provider/runtime diagnostics attached to AssistantMessage.diagnostics. Not read line-by-line this pass.",
+  },
+
   // --- Agent harness contract (src/agents/harness) ---
   {
     path: "src/agents/harness/types.ts",

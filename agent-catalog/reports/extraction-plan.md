@@ -10,6 +10,8 @@ Full guidance lives in `../EXTRACTION-GUIDE.md`; this report is the database-der
 - `(OpenAI reasoning-effort mapper)` (function, critical importance, low coupling) -- packages/ai/src/providers/openai-reasoning-effort.ts
 - `(OpenAI/ChatGPT OAuth module)` (constant, critical importance, low coupling) -- src/llm/utils/oauth/openai-chatgpt.ts
 - `AgentHarness` (interface, critical importance, low coupling) -- src/agents/harness/types.ts
+- `AssistantMessageEvent` (type, critical importance, low coupling) -- packages/llm-core/src/types.ts
+- `ThinkingContent` (interface, critical importance, low coupling) -- packages/llm-core/src/types.ts
 - `createAssistantMessageEventStream` (factory, critical importance, low coupling) -- packages/ai/src/utils/event-stream.ts
 - `defaultApiRegistry` (constant, critical importance, low coupling) -- packages/ai/src/internal/runtime.ts
 - `defaultLlmRuntime` (constant, critical importance, low coupling) -- packages/ai/src/internal/runtime.ts
@@ -18,6 +20,8 @@ Full guidance lives in `../EXTRACTION-GUIDE.md`; this report is the database-der
 - `stream` (function, critical importance, low coupling) -- src/llm/stream.ts
 - `(ChatGPT OAuth JWT helper)` (function, high importance, low coupling) -- packages/ai/src/utils/oauth/openai-chatgpt-jwt.ts
 - `(oauth.ts module)` (constant, high importance, low coupling) -- src/llm/oauth.ts
+- `Tool` (interface, high importance, low coupling) -- packages/llm-core/src/types.ts
+- `ValidateToolArgumentsFn` (type, high importance, low coupling) -- packages/llm-core/src/types.ts
 - `complete` (function, high importance, low coupling) -- src/llm/stream.ts
 - `getRegisteredAgentHarness` (function, high importance, low coupling) -- src/agents/harness/registry.ts
 - `(GitHub Copilot OAuth module)` (constant, medium importance, low coupling) -- src/llm/utils/oauth/github-copilot.ts

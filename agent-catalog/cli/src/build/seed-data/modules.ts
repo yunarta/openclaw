@@ -2,6 +2,31 @@ import type { SeedModule } from "../seed-types.js";
 
 export const modules: SeedModule[] = [
   {
+    name: "llm-core-foundation",
+    rootPath: "packages/llm-core",
+    category: "provider",
+    status: "confirmed",
+    purpose:
+      "The foundational type + validation package underneath @openclaw/ai. Defines every shared LLM contract (Api, Model, Message, AssistantMessage, ThinkingContent, ToolCall, Usage, Tool, Context, AssistantMessageEvent) with zero HTTP/provider logic.",
+    responsibilities:
+      "Type definitions for the whole provider stack; tool-argument validation (validation.ts) against a TypeBox `Tool.parameters` schema; diagnostic-info types.",
+    nonResponsibilities:
+      "Does not make HTTP requests, does not know about specific providers (Anthropic/OpenAI/etc.), does not know about OpenClaw sessions/agents/plugins.",
+    publicSurface: "packages/llm-core/src/index.ts, src/types.ts, src/validation.ts.",
+    runtimeBehavior:
+      "Pure library: packages/ai imports these types (packages/ai/src/types.ts is a 1-line re-export) and packages/ai's provider adapters construct/consume these shapes when talking to each provider's wire API.",
+    extractionRelevance:
+      "critical -- even more reusable than packages/ai since it has no transport/HTTP concerns at all; a standalone gateway's agent-contract layer should depend on this package directly.",
+    extractionDifficulty: "low",
+    files: [
+      { fileKey: "packages/llm-core/package.json", role: "interface" },
+      { fileKey: "packages/llm-core/src/types.ts", role: "interface" },
+      { fileKey: "packages/llm-core/src/index.ts", role: "entry-point" },
+      { fileKey: "packages/llm-core/src/validation.ts", role: "policy" },
+      { fileKey: "packages/llm-core/src/utils/diagnostics.ts", role: "interface" },
+    ],
+  },
+  {
     name: "agent-runtime-core",
     rootPath: "src/agents/embedded-agent-runner",
     category: "agent-runtime",
