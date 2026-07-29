@@ -16,8 +16,8 @@ Markdown-based (SKILL.md) reusable agent skills with declarative frontmatter met
 
 ## Open questions
 
-- [high] Exactly how is a skill's SKILL.md content injected into the model's prompt -- fully upfront, or lazily via a tool call the model issues?
-  Likely: Likely a hybrid: a short skill index/description is always in context (for model-selection), with the full SKILL.md body fetched on demand via a tool when the skill is actually invoked -- consistent with the 'Skill' tool pattern referenced in root AGENTS.md ('Skills own workflows').
-- [medium] How does model-selection of a skill work when disableModelInvocation is false -- is it description-based (model reads a catalog and chooses), rule-based, or route-based?
-  Likely: Likely description-based: a compact per-skill description is included in the system prompt or a dedicated Skill tool's own description, and the model chooses by issuing a tool call naming the skill.
+- [low] Exactly how is a skill's SKILL.md content injected into the model's prompt -- fully upfront, or lazily via a tool call the model issues?
+  Likely: N/A -- resolved with direct evidence.
+- [low] How does model-selection of a skill work when disableModelInvocation is false -- is it description-based (model reads a catalog and chooses), rule-based, or route-based?
+  Likely: N/A -- resolved with direct evidence.
 

@@ -634,7 +634,7 @@ export const files: SeedFile[] = [
     category: "skills",
     importance: "critical",
     purpose:
-      "Defines the Skill type re-exported by src/skills/types.ts; the canonical loaded-skill shape (referenced via import, not read line-by-line this pass).",
+      "Defines the Skill type re-exported by src/skills/types.ts (the canonical loaded-skill shape). Also home of formatSkillsForPrompt (read in full, lines 38-65): renders the compact <available_skills> XML catalog (name/description/location/version only, never full SKILL.md body) injected into the model prompt, with instructions telling the model to use its own file-read tool to load a skill's full content on demand and re-read if <version> changed. Code comment confirms this layout is deliberately kept byte-for-byte aligned with Anthropic's upstream Agent Skills formatter.",
   },
   {
     path: "src/skills/discovery",
@@ -655,6 +655,13 @@ export const files: SeedFile[] = [
     category: "skills",
     importance: "high",
     purpose: "Directory confirmed to exist: runtime activation/invocation of a loaded skill.",
+  },
+  {
+    path: "src/skills/runtime/tool-dispatch.ts",
+    category: "skills",
+    importance: "critical",
+    purpose:
+      "resolveSkillDispatchTools (read in full, lines 51-217): policy-enforcement seam for a skill's command-dispatch: tool invocations. Runs the full normal tool-policy pipeline (profile/provider/global/agent/group/sender/sandbox/subagent/inherited allow-deny layers) before letting a skill invoke a tool. Code comment references security fix GHSA-mhm4-93fw-4qr2.",
   },
   {
     path: "src/skills/lifecycle",

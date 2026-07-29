@@ -14,9 +14,9 @@ or `SELECT * FROM unresolved_high_priority;` directly against `catalog.sqlite`.
 
 | Priority | Count |
 | --- | --- |
-| high | 6 |
-| medium | 3 |
-| low | 3 |
+| high | 5 |
+| medium | 2 |
+| low | 5 |
 
 ## [high] What is the exact discriminated-union type and full set of tag values for the internal agent-run event model (the AssistantMessageEventStreamContract's event payloads)?
 
@@ -63,15 +63,6 @@ or `SELECT * FROM unresolved_high_priority;` directly against `catalog.sqlite`.
 - **Likely interpretation:** Likely lives under a plugin (memory-related bundled extension) rather than src/memory, given how thin src/memory itself is.
 - **How to verify:** grep -rln 'memory_index_chunks\|memory_embedding_cache' --include=*.ts, then read the matching module(s).
 
-## [high] Exactly how is a skill's SKILL.md content injected into the model's prompt -- fully upfront, or lazily via a tool call the model issues?
-
-- **Category:** skills
-- **Status:** open
-- **Evidence inspected:** src/skills/types.ts's SkillUsagePath.readPath field ('Path visible to the tool runtime when it reads SKILL.md') suggests lazy, tool-mediated reads rather than eager full-content injection, but this is inferred from a field comment, not confirmed by reading the loader/runtime code.
-- **Why unresolved:** src/skills/loading and src/skills/runtime subdirectories were confirmed to exist but not opened this pass.
-- **Likely interpretation:** Likely a hybrid: a short skill index/description is always in context (for model-selection), with the full SKILL.md body fetched on demand via a tool when the skill is actually invoked -- consistent with the 'Skill' tool pattern referenced in root AGENTS.md ('Skills own workflows').
-- **How to verify:** Read src/skills/loading/*.ts and src/skills/runtime/*.ts in full, and find the model-facing tool (if any) that reads a SKILL.md body on demand.
-
 ## [low] What is the exact SecretRef resolution mechanism (type definition and resolver function) described in root AGENTS.md, and where does it live?
 
 - **Category:** authentication
@@ -90,14 +81,23 @@ or `SELECT * FROM unresolved_high_priority;` directly against `catalog.sqlite`.
 - **Likely interpretation:** Probably both: a background timer refreshes proactively before expiry, with a lazy on-error refresh as a fallback for the run loop.
 - **How to verify:** Read src/agents/embedded-agent-runner/run/runtime-preparation.ts in full and trace stopRuntimeAuthRefreshTimer back to its creation.
 
-## [medium] How does model-selection of a skill work when disableModelInvocation is false -- is it description-based (model reads a catalog and chooses), rule-based, or route-based?
+## [low] Exactly how is a skill's SKILL.md content injected into the model's prompt -- fully upfront, or lazily via a tool call the model issues?
 
 - **Category:** skills
-- **Status:** open
-- **Evidence inspected:** Not traced this pass.
-- **Why unresolved:** src/skills/discovery was confirmed to exist but not opened.
-- **Likely interpretation:** Likely description-based: a compact per-skill description is included in the system prompt or a dedicated Skill tool's own description, and the model chooses by issuing a tool call naming the skill.
-- **How to verify:** Read src/skills/discovery/*.ts and search for where skill descriptions are assembled into a prompt or tool schema.
+- **Status:** resolved
+- **Evidence inspected:** RESOLVED in a follow-up pass: formatSkillsForPrompt (src/skills/loading/skill-contract.ts:38-65, read in full) confirms only a compact catalog entry (name/description/location/version) is injected; the prompt text explicitly instructs the model to use its own read tool to load the full SKILL.md when the task matches the description.
+- **Why unresolved:** N/A -- resolved.
+- **Likely interpretation:** N/A -- resolved with direct evidence.
+- **How to verify:** Remaining depth gap: the exact call site that assembles the list of Skill records passed into formatSkillsForPrompt (i.e. the discovery/filtering step before formatting) was not traced this pass.
+
+## [low] How does model-selection of a skill work when disableModelInvocation is false -- is it description-based (model reads a catalog and chooses), rule-based, or route-based?
+
+- **Category:** skills
+- **Status:** resolved
+- **Evidence inspected:** RESOLVED in a follow-up pass: formatSkillsForPrompt's injected prompt text is description-based selection -- the model is shown every eligible skill's name/description/location and told to use its read tool 'when the task matches its description.' No rule-engine or router was found; selection is left to the model's own judgment against the description text.
+- **Why unresolved:** N/A -- resolved.
+- **Likely interpretation:** N/A -- resolved with direct evidence.
+- **How to verify:** N/A -- resolved.
 
 ## [medium] What is the exact function that dispatches a normalized provider tool-call event to a resolved ToolDescriptor's executor?
 

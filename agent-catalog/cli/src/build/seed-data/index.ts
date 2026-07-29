@@ -51,7 +51,16 @@ import {
   sandboxFindings,
   sandboxOpenQuestions,
 } from "./sandbox.js";
-import { skillDataTypes, seedSkills, skillEvidence, skillOpenQuestions } from "./skills.js";
+import {
+  skillSymbols,
+  skillDataTypes,
+  seedSkills,
+  skillFlows,
+  skillFlowSteps,
+  skillFindings,
+  skillEvidence,
+  skillOpenQuestions,
+} from "./skills.js";
 import {
   toolCapabilities,
   toolFlows,
@@ -74,6 +83,7 @@ export function buildCatalogSeed(): CatalogSeed {
       ...oauthSymbols,
       ...toolSymbols,
       ...sandboxSymbols,
+      ...skillSymbols,
     ],
     capabilities: [
       ...agentLoopCapabilities,
@@ -99,6 +109,7 @@ export function buildCatalogSeed(): CatalogSeed {
       ...oauthFlows,
       ...toolFlows,
       ...memorySessionFlows,
+      ...skillFlows,
     ],
     flowSteps: [
       ...agentLoopFlowSteps,
@@ -106,6 +117,7 @@ export function buildCatalogSeed(): CatalogSeed {
       ...oauthFlowSteps,
       ...toolFlowSteps,
       ...memorySessionFlowSteps,
+      ...skillFlowSteps,
     ],
     dataTypes: [
       ...providerDataTypes,
@@ -121,7 +133,7 @@ export function buildCatalogSeed(): CatalogSeed {
     memorySystems,
     persistenceEntities,
     snippets: [...agentLoopSnippets, ...providerSnippets],
-    findings: [...providerFindings, ...extraFindings, ...sandboxFindings],
+    findings: [...providerFindings, ...extraFindings, ...sandboxFindings, ...skillFindings],
     openQuestions: [
       ...oauthOpenQuestions,
       ...toolOpenQuestions,

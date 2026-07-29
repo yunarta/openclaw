@@ -15,6 +15,7 @@ Full guidance lives in `../EXTRACTION-GUIDE.md`; this report is the database-der
 - `createAssistantMessageEventStream` (factory, critical importance, low coupling) -- packages/ai/src/utils/event-stream.ts
 - `defaultApiRegistry` (constant, critical importance, low coupling) -- packages/ai/src/internal/runtime.ts
 - `defaultLlmRuntime` (constant, critical importance, low coupling) -- packages/ai/src/internal/runtime.ts
+- `formatSkillsForPrompt` (function, critical importance, low coupling) -- src/skills/loading/skill-contract.ts
 - `isToolAllowed` (function, critical importance, low coupling) -- src/agents/sandbox/tool-policy.ts
 - `registerAgentHarness` (function, critical importance, low coupling) -- src/agents/harness/registry.ts
 - `registerBuiltInApiProviders` (function, critical importance, low coupling) -- packages/ai/src/providers.ts
@@ -61,7 +62,6 @@ Full guidance lives in `../EXTRACTION-GUIDE.md`; this report is the database-der
 
 ## Unresolved high-priority questions
 
-- [high] Exactly how is a skill's SKILL.md content injected into the model's prompt -- fully upfront, or lazily via a tool call the model issues?
 - [high] Does a scheduled cron job execute through the same runEmbeddedAgent entry point as an interactive run, or a separate execution path?
 - [high] What module writes to and reads from the semantic memory index tables (memory_index_chunks, memory_embedding_cache)?
 - [high] Can an interrupted embedded run (process crash mid-turn, not a CLI-backend session) be resumed after restart, and if so, from what durable state?
